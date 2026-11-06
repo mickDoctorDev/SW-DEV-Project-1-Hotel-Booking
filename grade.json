@@ -1,0 +1,9 @@
+{
+  "repository": "local/repo",
+  "score": 0,
+  "total": 0,
+  "failed": 0,
+  "percentage": "0.00%",
+  "error": "Server exited early with code 1",
+  "updatedAt": "2026-10-09T06:01:52.630Z"
+}
