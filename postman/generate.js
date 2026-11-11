@@ -290,13 +290,88 @@ const pay = folder('Extra - Payment, QR code and email receipt', [
     req('Clean up: delete the paid booking', 'DELETE', '/bookings/{{payBookingId}}', { test: status(200) }),
 ]);
 
+// Regression checks for the account features (admin create user, forgot password, delete-me). Uses 1 booking attempt.
+const security = folder('Security - account features', [
+    req('Forgot password, unknown email -> same 200 answer', 'POST', '/auth/forgotpassword', {
+        auth: false, body: { email: 'nobody{{secRun}}@test.com' },
+        pre: `pm.collectionVariables.set('secRun', Date.now());`,
+        test: `${status(200)}
+    pm.collectionVariables.set('forgotMessage', pm.response.json().message);`,
+    }),
+    req('Forgot password, real email -> same answer, no token leaked', 'POST', '/auth/forgotpassword', {
+        auth: false, body: { email: '{{seedUserEmail}}' },
+        test: `${status(200)}
+    const b = pm.response.json();
+    pm.test('Same message as for an unknown email (no account enumeration)', () => pm.expect(b.message).to.eql(pm.collectionVariables.get('forgotMessage')));
+    pm.test('Reset token is NOT in the response', () => { pm.expect(b).to.not.have.property('resetToken'); pm.expect(b).to.not.have.property('resetUrl'); });`,
+    }),
+    req('Login admin', 'POST', '/auth/login', {
+        auth: false, body: { email: '{{adminEmail}}', password: '{{adminPassword}}' },
+        test: `${status(200)}
+    pm.collectionVariables.set('token', pm.response.json().token);`,
+    }),
+    req('Admin create user with weak password -> 400', 'POST', '/auth/create-user', {
+        body: { name: 'Weak', tel: '0812345678', email: 'weak{{secRun}}@test.com', password: '123', role: 'user' },
+        test: status(400, 'Password policy enforced (400)'),
+    }),
+    req('Admin create user with unknown role -> 400', 'POST', '/auth/create-user', {
+        body: { name: 'Odd Role', tel: '0812345678', email: 'odd{{secRun}}@test.com', password: 'Strong123', role: 'superuser' },
+        test: status(400, 'Unknown role rejected (400)'),
+    }),
+    req('Admin create user (valid)', 'POST', '/auth/create-user', {
+        body: { name: 'Created By Admin', tel: '0812345678', email: 'created{{secRun}}@test.com', password: 'Strong123', role: 'user' },
+        test: `${status(201)}
+    pm.test('role=user', () => pm.expect(pm.response.json().data.role).to.eql('user'));`,
+    }),
+    req('Admin logout', 'POST', '/auth/logout', {
+        test: `${status(200)}
+    pm.collectionVariables.unset('token');`,
+    }),
+    req('Login as the new user', 'POST', '/auth/login', {
+        auth: false, body: { email: 'created{{secRun}}@test.com', password: 'Strong123' },
+        test: `${status(200)}
+    pm.collectionVariables.set('token', pm.response.json().token);`,
+    }),
+    req('User cannot create users -> 403', 'POST', '/auth/create-user', {
+        body: { name: 'Nope', tel: '0812345678', email: 'nope{{secRun}}@test.com', password: 'Strong123', role: 'admin' },
+        test: status(403, 'Only admins can create users (403)'),
+    }),
+    req('Book and pay a stay', 'POST', '/hotels/{{hotelId}}/bookings', {
+        body: { checkIn: '{{checkIn}}', checkOut: '{{checkOut}}' },
+        pre: `
+    pm.collectionVariables.set('dayBase', 30 + Math.floor(Math.random() * 300));${DATE_FN}
+    pm.variables.set('checkIn', d(base)); pm.variables.set('checkOut', d(base + 1));
+    if (!pm.collectionVariables.get('hotelId')) {
+        pm.sendRequest(pm.environment.get('baseUrl') + '/hotels', (e, r) => pm.collectionVariables.set('hotelId', r.json().data[0]._id));
+    }`,
+        test: `${status(201)}
+    const id = pm.response.json().data._id;
+    pm.collectionVariables.set('secBookingId', id);
+    pm.sendRequest({
+        url: pm.environment.get('baseUrl') + '/bookings/' + id + '/pay', method: 'POST',
+        header: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.collectionVariables.get('token') },
+        body: { mode: 'raw', raw: JSON.stringify({ method: 'promptpay' }) },
+    }, (e, r) => pm.test('Paid', () => pm.expect(r.code).to.eql(200)));`,
+    }),
+    req('Delete-me with a paid upcoming stay -> 409', 'DELETE', '/auth/delete-me', {
+        test: status(409, 'Account with paid upcoming booking is kept (409)'),
+    }),
+    req('Cancel that booking', 'DELETE', '/bookings/{{secBookingId}}', { test: status(200) }),
+    req('Delete-me', 'DELETE', '/auth/delete-me', { test: status(200, 'Account deleted (200)') }),
+    req('Deleted account cannot log in -> 401', 'POST', '/auth/login', {
+        auth: false, body: { email: 'created{{secRun}}@test.com', password: 'Strong123' },
+        test: `${status(401)}
+    pm.collectionVariables.unset('token');`,
+    }),
+]);
+
 const collection = {
     info: {
         name: 'Hotel Booking - Presentation Demo',
         description: 'Steps 1-12 of the presentation sheet. Run with Newman (see package.json "demo" script). Requires `node seed.js` first.',
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
-    item: [demo, pay, rate],
+    item: [demo, pay, security, rate],
     variable: [{ key: 'runId', value: '' }, { key: 'dayBase', value: '60' }],
 };
 const environment = {

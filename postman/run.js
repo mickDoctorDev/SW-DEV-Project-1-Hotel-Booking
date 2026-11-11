@@ -8,6 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', 'config', 'config.en
 const FOLDERS = {
     demo: 'Demo (Steps 1-12)',
     payment: 'Extra - Payment, QR code and email receipt',
+    security: 'Security - account features',
     ratelimit: 'Extra - Rate limit 5 booking attempts per minute',
 };
 const which = process.argv[2] || 'demo';
