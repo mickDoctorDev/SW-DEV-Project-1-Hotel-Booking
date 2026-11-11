@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const User = require("../models/User");
 const RefreshToken = require("../models/RefreshToken");
+const Booking = require("../models/Booking");
+const sendEmail = require("../utils/sendEmail");
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const DAY = 24 * 60 * 60 * 1000;
@@ -102,3 +104,149 @@ exports.logout = async (req, res) => {
     res.clearCookie('refreshToken', { ...cookieBase(), path: '/api/v1/auth' });
     res.status(200).json({ success: true, data: {} });
 }
+
+// @desc    Admin creates a user (can specify role: 'admin' or 'user')
+// @route   POST /api/v1/auth/create-user
+// @access  Private/Admin
+exports.createUserByAdmin = async (req, res) => {
+    try {
+        const { name, tel, email, password, role } = req.body;
+
+        const user = await User.create({
+            name,
+            tel,
+            email,
+            password,
+            role: role || 'user'
+        });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                tel: user.tel,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        if (error.code === 11000) return res.status(400).json({ success: false, message: 'Email already registered' });
+        if (error.name === 'ValidationError') return res.status(400).json({ success: false, message: Object.values(error.errors).map(e => e.message).join(', ') });
+        res.status(500).json({ success: false, message: 'Cannot create user' });
+    }
+};
+
+// @desc    Delete own user account
+// @route   DELETE /api/v1/auth/delete-me
+// @access  Private
+exports.deleteMe = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Delete associated refresh tokens
+        await RefreshToken.deleteMany({ user: userId });
+
+        // 2. Delete user's bookings
+        await Booking.deleteMany({ user: userId });
+
+        // 3. Delete user
+        await User.findByIdAndDelete(userId);
+
+        // 4. Clear cookies
+        res.clearCookie('token', cookieBase());
+        res.clearCookie('refreshToken', { ...cookieBase(), path: '/api/v1/auth' });
+
+        res.status(200).json({
+            success: true,
+            message: 'User account and associated data deleted successfully',
+            data: {}
+        });
+    } catch {
+        res.status(500).json({ success: false, message: 'Cannot delete user account' });
+    }
+};
+
+// @desc    Forgot Password - request reset token & send email
+// @route   POST /api/v1/auth/forgotpassword
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'There is no user with that email' });
+        }
+
+        // Get reset token
+        const resetToken = user.getResetPasswordToken();
+        await user.save({ validateBeforeSave: false });
+
+        // Create reset URL
+        const clientOrigin = process.env.CLIENT_ORIGIN || `${req.protocol}://${req.get('host')}`;
+        const resetUrl = `${clientOrigin}/resetpassword/${resetToken}`;
+
+        const message = `You are receiving this email because you (or someone else) requested a password reset.\n\nPlease reset your password by submitting a PUT request with your new password to:\n\n${resetUrl}\n\nThis link is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Password Reset Request',
+                message
+            });
+
+            res.status(200).json({
+                success: true,
+                message: 'Password reset email sent',
+                resetToken,
+                resetUrl
+            });
+        } catch (emailErr) {
+            console.error('Email error:', emailErr);
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpire = undefined;
+            await user.save({ validateBeforeSave: false });
+
+            return res.status(500).json({ success: false, message: 'Email could not be sent' });
+        }
+    } catch {
+        res.status(500).json({ success: false, message: 'Cannot process forgot password request' });
+    }
+};
+
+// @desc    Reset Password using token
+// @route   PUT /api/v1/auth/resetpassword/:resettoken
+// @access  Public
+exports.resetPassword = async (req, res) => {
+    try {
+        const resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(req.params.resettoken)
+            .digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+        }
+
+        // Set new password
+        user.password = req.body.password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        await user.save();
+
+        // Invalidate previous refresh tokens for security
+        await RefreshToken.updateMany({ user: user._id, revokedAt: null }, { revokedAt: new Date() });
+
+        // Issue new tokens and log in automatically
+        await sendTokenResponse(user, 200, res);
+    } catch {
+        res.status(500).json({ success: false, message: 'Cannot reset password' });
+    }
+};
