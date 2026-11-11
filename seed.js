@@ -1,6 +1,7 @@
 // Usage: node seed.js   — idempotent: inserts mock hotels/users/bookings only if missing (never deletes).
 require('dotenv').config({ path: './config/config.env' });
 const mongoose = require('mongoose');
+require('./config/dns')();
 const Hotel = require('./models/Hotel');
 const User = require('./models/User');
 const Booking = require('./models/Booking');

@@ -14,8 +14,21 @@ exports.bookingLimiter = make({
     message: 'Too many booking attempts, please try again in a minute',
 });
 
+// Dev/demo switch: RELAX_RATE_LIMITS=true skips the auth and global limiters so repeated Newman rehearsals
+// are not locked out. Ignored in production. The booking limiter above is a requirement and is never skipped.
+const relaxed = () => process.env.RELAX_RATE_LIMITS === 'true' && process.env.NODE_ENV !== 'production';
+exports.relaxed = relaxed;
+
 // Brute-force guard on login/register, per IP (trust proxy is set in server.js, so X-Forwarded-For is only trusted from known proxies).
 exports.authLimiter = make({
     windowMs: 15 * 60 * 1000, limit: 20,
+    skip: relaxed,
     message: 'Too many attempts, please try again later',
+});
+
+// Global per-IP limiter for every route.
+exports.globalLimiter = make({
+    windowMs: 10 * 60 * 1000, limit: 100,
+    skip: relaxed,
+    message: 'Too many requests, please try again later',
 });
