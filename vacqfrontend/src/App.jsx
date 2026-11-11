@@ -3,6 +3,7 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Header from './components/Header'
 import PrivateRoute from './components/PrivateRoute'
+import ChatWidget from './components/ChatWidget'
 import Hotels from './pages/Hotels'
 import BookHotel from './pages/BookHotel'
 import Bookings from './pages/Bookings'
@@ -27,6 +28,7 @@ function App() {
           </Routes>
         </div>
       </Router>
+      <ChatWidget />
       <ToastContainer position='top-right' autoClose={4000} />
     </>
   );

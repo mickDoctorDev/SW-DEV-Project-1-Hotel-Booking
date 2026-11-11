@@ -14,6 +14,13 @@ exports.bookingLimiter = make({
     message: 'Too many booking attempts, please try again in a minute',
 });
 
+// Chatbot: every message costs AI-API quota, so cap it per user. Mount AFTER protect.
+exports.chatLimiter = make({
+    windowMs: 60 * 1000, limit: 10,
+    keyGenerator: (req) => `chat:${req.user.id}`,
+    message: 'Too many chat messages, please wait a minute',
+});
+
 // Dev/demo switch: RELAX_RATE_LIMITS=true skips the auth and global limiters so repeated Newman rehearsals
 // are not locked out. Ignored in production. The booking limiter above is a requirement and is never skipped.
 const relaxed = () => process.env.RELAX_RATE_LIMITS === 'true' && process.env.NODE_ENV !== 'production';
