@@ -21,3 +21,16 @@ exports.validateLogin = (req, res, next) => {
     if (!isStr(email) || !isStr(password) || !email || !password) return fail(res, 'Please provide an email and password');
     next();
 };
+
+exports.validateForgotPassword = (req, res, next) => {
+    const { email } = req.body || {};
+    if (!isStr(email) || !EMAIL.test(email) || email.length > 254) return fail(res, 'Please provide a valid email');
+    next();
+};
+
+exports.validateResetPassword = (req, res, next) => {
+    const { password } = req.body || {};
+    if (!isStr(password) || password.length < 8 || password.length > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password))
+        return fail(res, 'Password must be 8-72 characters and contain a letter and a digit');
+    next();
+};
