@@ -16,9 +16,9 @@ dotenv.config({ path: "./config/config.env" });
 
 connectDB();
 
-const hospitals = require("./routes/hospitals");
+const hotels = require("./routes/hotels");
 const auth = require("./routes/auth");
-const appointments = require('./routes/appointments');
+const bookings = require('./routes/bookings');
 const PORT = process.env.PORT || 8080;
 const app = express();
 
@@ -26,9 +26,9 @@ const swaggerOptions = {
     swaggerDefinition: {
         openapi: '3.0.0',
         info: {
-            title: 'Library API',
+            title: 'Hotel Booking API',
             version: '1.0.0',
-            description: 'A simple Express VacQ API',
+            description: 'Hotel Booking API',
         },
         servers: [
             {
@@ -44,7 +44,9 @@ app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocs));
 
 
 app.set('query parser', 'extended');
-app.use(express.json());
+// Only trust X-Forwarded-For from this many proxy hops (0 = none), so clients cannot spoof their IP for rate limiting
+app.set('trust proxy', Number(process.env.TRUST_PROXY) || 0);
+app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
 const limiter = rateLimit({
@@ -62,15 +64,15 @@ app.use((req, res, next) => {
     next();
 });
 app.use(hpp());
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
 
 app.get('/', (req, res) => {
     res.status(200).send('API is running successfully');
 });
 
-app.use('/api/v1/hospitals', hospitals);
+app.use('/api/v1/hotels', hotels);
 app.use('/api/v1/auth', auth);
-app.use('/api/v1/appointments', appointments);
+app.use('/api/v1/bookings', bookings);
 
 
 

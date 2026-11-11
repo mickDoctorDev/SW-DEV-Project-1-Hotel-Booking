@@ -11,10 +11,10 @@ function Register() {
     email: '',
     password: '',
     password2: '',
-    role: 'user'
+    tel: ''
   });
 
-  const { name, email, password, password2, role } = formData;
+  const { name, email, password, password2, tel } = formData;
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -53,7 +53,7 @@ function Register() {
         name,
         email,
         password,
-        role
+        tel
       }
 
       dispatch(register(userData))
@@ -121,13 +121,14 @@ function Register() {
           </div>
           <div className="form-group">
             <input
-              type="text"
+              type="tel"
               className='form-control'
-              id='role'
-              name='role'
-              value={role}
+              id='tel'
+              name='tel'
+              value={tel}
               onChange={onChange}
-              placeholder='Enter Your Role'
+              placeholder='Enter Your telephone number'
+              pattern='[0-9+\-\s]{8,15}'
               required
             />
           </div>
