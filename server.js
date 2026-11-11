@@ -6,13 +6,13 @@ const cookieParser = require("cookie-parser");
 const mongoSanitize = require('@exortek/express-mongo-sanitize');
 const helmet = require('helmet');
 const { xss } = require('express-xss-sanitizer');
-const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const cors = require('cors');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUI = require('swagger-ui-express');
 
 dotenv.config({ path: "./config/config.env" });
+require('./config/checkEnv')();
 
 connectDB();
 
@@ -49,15 +49,11 @@ app.set('trust proxy', Number(process.env.TRUST_PROXY) || 0);
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
-const limiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 100
-
-});
+const { globalLimiter } = require('./middleware/rateLimit');
 app.use(mongoSanitize());
 app.use(helmet());
 app.use(xss());
-app.use(limiter);
+app.use(globalLimiter);
 
 app.use((req, res, next) => {
     Object.defineProperty(req, 'query', { value: { ...req.query }, writable: true });

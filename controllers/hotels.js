@@ -1,7 +1,7 @@
 const Hotel = require('../models/Hotel');
 const Booking = require('../models/Booking');
 
-const FIELDS = ['name', 'address', 'tel', 'totalRooms', 'createdAt'];
+const FIELDS = ['name', 'address', 'tel', 'totalRooms', 'pricePerNight', 'createdAt'];
 const pick = (obj, keys) => Object.fromEntries(keys.filter(k => obj[k] !== undefined).map(k => [k, obj[k]]));
 const csv = (v) => (typeof v === 'string' ? v.split(',').filter(f => FIELDS.includes(f.replace(/^-/, ''))) : []);
 
@@ -43,7 +43,7 @@ exports.getHotel = async (req, res) => {
 
 exports.createHotel = async (req, res) => {
     try {
-        const hotel = await Hotel.create(pick(req.body, ['name', 'address', 'tel', 'totalRooms']));
+        const hotel = await Hotel.create(pick(req.body, ['name', 'address', 'tel', 'totalRooms', 'pricePerNight']));
         res.status(201).json({ success: true, data: hotel });
     } catch (error) {
         res.status(400).json({ success: false, message: error.code === 11000 ? 'Hotel name already exists' : error.message });
@@ -52,7 +52,7 @@ exports.createHotel = async (req, res) => {
 
 exports.updateHotel = async (req, res) => {
     try {
-        const hotel = await Hotel.findByIdAndUpdate(req.params.id, pick(req.body, ['name', 'address', 'tel', 'totalRooms']), {
+        const hotel = await Hotel.findByIdAndUpdate(req.params.id, pick(req.body, ['name', 'address', 'tel', 'totalRooms', 'pricePerNight']), {
             returnDocument: 'after', runValidators: true
         });
         if (!hotel) return res.status(404).json({ success: false, message: 'Hotel not found' });

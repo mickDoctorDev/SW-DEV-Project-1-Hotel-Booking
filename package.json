@@ -16,8 +16,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/",
-    "dev": "nodemon server.js"
+    "test": "node --test \"test/**/*.test.js\"",
+    "dev": "nodemon server.js",
+    "seed": "node seed.js",
+    "demo": "node postman/run.js demo",
+    "demo:ratelimit": "node postman/run.js ratelimit",
+    "demo:payment": "node postman/run.js payment",
+    "postman:generate": "node postman/generate.js"
   },
   "dependencies": {
     "@exortek/express-mongo-sanitize": "^4.0.0",
@@ -35,10 +40,13 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.4",
     "nodemailer": "^10.5.0",
+    "qrcode": "^1.5.4",
     "swagger-jsdoc": "^6.0.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "newman": "^6.2.3",
+    "newman-reporter-htmlextra": "^1.23.1",
     "nodemon": "^3.1.14"
   }
 }

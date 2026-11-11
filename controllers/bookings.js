@@ -1,10 +1,12 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Hotel = require('../models/Hotel');
-const { toDay, validateStay, overlapFilter } = require('../utils/booking');
+const { toDay, validateStay, overlapFilter, stayAmount } = require('../utils/booking');
 const { audit } = require('../utils/audit');
+const { sendBookingConfirmation, receiptHtml, qrDataUrl } = require('../utils/receipt');
 
-const POPULATE = { path: 'hotel', select: 'name address tel' };
+const POPULATE = { path: 'hotel', select: 'name address tel pricePerNight' };
 
 class HttpError extends Error {
     constructor(status, message) { super(message); this.status = status; }
@@ -94,6 +96,8 @@ exports.updateBooking = async (req, res) => {
         const { checkIn, checkOut } = parseStay(req.body);
         const existing = await Booking.findOne(scope(req));
         if (!existing) throw new HttpError(404, `No booking with the id of ${req.params.id}`);
+        // the paid amount was computed from these dates, so users cannot change them afterwards (admins still can)
+        if (existing.status === 'paid' && req.user.role !== 'admin') throw new HttpError(409, 'A paid booking cannot be changed');
 
         const updated = await withHotelLock(existing.hotel, async (hotel, session) => {
             await assertRoomFree(hotel, checkIn, checkOut, session, existing._id);
@@ -118,5 +122,58 @@ exports.deleteBooking = async (req, res) => {
         res.status(200).json({ success: true, data: {} });
     } catch (error) {
         sendError(res, error, 'Cannot delete Booking');
+    }
+}
+
+const parsePayment = (body) => {
+    const method = body && body.method;
+    if (method !== 'card' && method !== 'promptpay') throw new HttpError(400, "method must be 'card' or 'promptpay'");
+    if (method === 'card') {
+        const card = typeof body.cardNumber === 'string' ? body.cardNumber.replace(/[\s-]/g, '') : '';
+        if (!/^\d{16}$/.test(card)) throw new HttpError(400, 'cardNumber must be 16 digits');
+        // mock gateway: any card ending in 0000 is declined, so the failure path can be demoed
+        if (card.endsWith('0000')) throw new HttpError(402, 'Payment declined by the bank (mock)');
+    }
+    return method; // the card number is only checked, never stored
+};
+
+//@route POST /api/v1/bookings/:id/pay   (mock payment; owner only, admins cannot pay for others)
+exports.payBooking = async (req, res) => {
+    try {
+        const method = parsePayment(req.body);
+        const booking = await Booking.findOne({ _id: req.params.id, deletedAt: null, user: req.user.id }).populate(POPULATE);
+        if (!booking || !booking.hotel) throw new HttpError(404, `No booking with the id of ${req.params.id}`);
+        if (booking.status === 'paid') throw new HttpError(409, 'This booking is already paid');
+
+        const payment = {
+            amount: stayAmount(booking.checkIn, booking.checkOut, booking.hotel.pricePerNight),
+            method,
+            reference: 'PAY-' + crypto.randomBytes(6).toString('hex').toUpperCase(),
+            paidAt: new Date(),
+        };
+        // atomic pending -> paid: a double submit cannot pay twice
+        const paid = await Booking.findOneAndUpdate(
+            { _id: booking._id, deletedAt: null, status: 'pending' },
+            { status: 'paid', payment },
+            { returnDocument: 'after' }
+        ).populate(POPULATE);
+        if (!paid) throw new HttpError(409, 'This booking is already paid');
+
+        const email = await sendBookingConfirmation(paid, req.user);
+        res.status(200).json({ success: true, data: paid, email });
+    } catch (error) {
+        sendError(res, error, 'Cannot process payment');
+    }
+}
+
+//@route GET /api/v1/bookings/:id/receipt   (HTML receipt with the check-in QR code; owner or admin)
+exports.getReceipt = async (req, res) => {
+    try {
+        const booking = await Booking.findOne(scope(req)).populate(POPULATE).populate({ path: 'user', select: 'name email' });
+        if (!booking || !booking.hotel) throw new HttpError(404, `No booking with the id of ${req.params.id}`);
+        if (booking.status !== 'paid') throw new HttpError(409, 'This booking has not been paid yet');
+        res.type('html').send(receiptHtml(booking, booking.user, await qrDataUrl(booking)));
+    } catch (error) {
+        sendError(res, error, 'Cannot create receipt');
     }
 }

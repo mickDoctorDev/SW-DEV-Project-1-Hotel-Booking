@@ -3,7 +3,8 @@ import axios from 'axios'
 // tokens live in HttpOnly cookies set by the API, so requests must send credentials
 axios.defaults.withCredentials = true
 
-const API_URL = 'http://localhost:5001/api/v1/auth/'
+// Set VITE_API_URL (e.g. in vacqfrontend/.env.local or the hosting dashboard) when the API is not on localhost:5001
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1'}/auth/`
 
 //Register user
 const register = async (userData) => {
