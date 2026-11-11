@@ -48,6 +48,9 @@ app.set('query parser', 'extended');
 app.set('trust proxy', Number(process.env.TRUST_PROXY) || 0);
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
+// CORS first, so even error responses (e.g. a 429 from the limiter) reach the browser.
+// exposedHeaders lets the frontend read Retry-After on a 429 to tell the user how long to wait.
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true, exposedHeaders: ['Retry-After', 'RateLimit-Reset'] }));
 
 const { globalLimiter } = require('./middleware/rateLimit');
 app.use(mongoSanitize());
@@ -60,7 +63,6 @@ app.use((req, res, next) => {
     next();
 });
 app.use(hpp());
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
 
 app.get('/', (req, res) => {
     res.status(200).send('API is running successfully');

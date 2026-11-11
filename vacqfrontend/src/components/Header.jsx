@@ -1,5 +1,5 @@
-import { FaSignInAlt, FaSignOutAlt, FaUser } from 'react-icons/fa'
-import { Link, useNavigate } from 'react-router-dom'
+import { FaSignInAlt, FaSignOutAlt, FaUser, FaHotel, FaClipboardList } from 'react-icons/fa'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout, reset } from '../features/auth/authSlice'
 
@@ -8,8 +8,8 @@ function Header() {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
 
-  const onLogout = () => {
-    dispatch(logout())
+  const onLogout = async () => {
+    await dispatch(logout())
     dispatch(reset())
     navigate('/')
   }
@@ -17,26 +17,37 @@ function Header() {
   return (
     <header className='header'>
       <div className='logo'>
-        <Link to='/'>Hotel Booking</Link>
+        <Link to='/'><FaHotel /> Hotel Booking</Link>
       </div>
       <ul>
+        <li><NavLink to='/' end>Hotels</NavLink></li>
         {user ? (
-          <li>
-            <button className='btn' onClick={onLogout}>
-              <FaSignOutAlt /> Logout
-            </button>
-          </li>
+          <>
+            <li>
+              <NavLink to='/bookings'>
+                <FaClipboardList /> {user.role === 'admin' ? 'All bookings' : 'My bookings'}
+              </NavLink>
+            </li>
+            <li className='who'>
+              {user.name}{user.role === 'admin' && <span className='role-badge'>admin</span>}
+            </li>
+            <li>
+              <button className='btn btn-sm' onClick={onLogout}>
+                <FaSignOutAlt /> Logout
+              </button>
+            </li>
+          </>
         ) : (
           <>
             <li>
-              <Link to='/login'>
+              <NavLink to='/login'>
                 <FaSignInAlt /> Login
-              </Link>
+              </NavLink>
             </li>
             <li>
-              <Link to='/register'>
+              <NavLink to='/register'>
                 <FaUser /> Register
-              </Link>
+              </NavLink>
             </li>
           </>
         )}

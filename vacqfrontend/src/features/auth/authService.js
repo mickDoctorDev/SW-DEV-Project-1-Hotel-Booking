@@ -1,44 +1,33 @@
-import axios from 'axios'
+import api from '../../app/api'
 
-// tokens live in HttpOnly cookies set by the API, so requests must send credentials
-axios.defaults.withCredentials = true
+// Only non-sensitive profile fields are kept in localStorage; the tokens stay in HttpOnly cookies.
+const KEY = 'user'
+const toProfile = (d) => ({ _id: d._id, name: d.name, email: d.email, role: d.role })
 
-// Set VITE_API_URL (e.g. in vacqfrontend/.env.local or the hosting dashboard) when the API is not on localhost:5001
-const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api/v1'}/auth/`
-
-//Register user
-const register = async (userData) => {
-  const response = await axios.post(API_URL + 'register/', userData)
-  if (response.data) {
-    //localStorage.setItem('user',JSON.stringify(response.data))
-    localStorage.setItem('user', response.data.name)
+export const loadUser = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem(KEY))
+    return u && typeof u === 'object' && u.role ? u : null
+  } catch {
+    return null
   }
-  console.log(response.data);
-  return response.data
+}
+export const clearUser = () => localStorage.removeItem(KEY)
+
+const save = (data) => {
+  const profile = toProfile(data)
+  localStorage.setItem(KEY, JSON.stringify(profile))
+  return profile
 }
 
-//Login user
-const login = async (userData) => {
-  const response = await axios.post(API_URL + 'login', userData)
-  if (response.data) {
-    //localStorage.setItem('user',JSON.stringify(response.data))
-    localStorage.setItem('user', response.data.name)
-  }
-  console.log(response.data);
-  return response.data
-}
+const register = async (userData) => save((await api.post('/auth/register', userData)).data)
 
-//Logout user
+const login = async (userData) => save((await api.post('/auth/login', userData)).data)
+
 const logout = async () => {
-  try { await axios.post(API_URL + 'logout') } catch { /* clear local state even if the call fails */ }
-  localStorage.setItem('user', null);
-  localStorage.removeItem('user');
+  try { await api.post('/auth/logout') } catch { /* clear local state even if the call fails */ }
+  clearUser()
 }
 
-const authService = {
-  register,
-  logout,
-  login,
-}
-
-export default authService;
+const authService = { register, login, logout }
+export default authService
