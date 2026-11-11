@@ -102,3 +102,35 @@ exports.logout = async (req, res) => {
     res.clearCookie('refreshToken', { ...cookieBase(), path: '/api/v1/auth' });
     res.status(200).json({ success: true, data: {} });
 }
+
+// @desc    Admin creates a user (can specify role: 'admin' or 'user')
+// @route   POST /api/v1/auth/create-user
+// @access  Private/Admin
+exports.createUserByAdmin = async (req, res) => {
+    try {
+        const { name, tel, email, password, role } = req.body;
+
+        const user = await User.create({
+            name,
+            tel,
+            email,
+            password,
+            role: role || 'user'
+        });
+
+        res.status(201).json({
+            success: true,
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                tel: user.tel,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        if (error.code === 11000) return res.status(400).json({ success: false, message: 'Email already registered' });
+        if (error.name === 'ValidationError') return res.status(400).json({ success: false, message: Object.values(error.errors).map(e => e.message).join(', ') });
+        res.status(500).json({ success: false, message: 'Cannot create user' });
+    }
+};
