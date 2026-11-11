@@ -1,0 +1,33 @@
+---
+title: Sequence Diagram — Log in
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant R as routes/auth
+    participant MW as authLimiter + validateLogin
+    participant C as controllers/auth
+    participant UM as User model
+    participant RT as RefreshToken model
+    participant DB as MongoDB
+
+    U->>R: POST /api/v1/auth/login {email, password}
+    R->>MW: check rate limit (per IP) and input
+    alt too many attempts
+        MW-->>U: 429 Too Many Requests
+    else email or password missing / not a string
+        MW-->>U: 400 Bad Request
+    end
+    MW->>C: login(req, res)
+    C->>UM: findOne({email}).select(+password)
+    UM->>DB: query users
+    DB-->>UM: user document
+    C->>UM: matchPassword(password)  (bcrypt.compare)
+    alt user not found or wrong password
+        C-->>U: 401 Invalid credentials
+    else valid
+        C->>UM: getSignedJwtToken()  (15-min access token)
+        C->>RT: create({user, tokenHash: sha256(refresh)})
+        RT->>DB: insert refreshtokens
+        C-->>U: 200 {token, role} + Set-Cookie token, refreshToken (HttpOnly, SameSite=Strict)
+    end

@@ -1,0 +1,38 @@
+---
+title: Sequence Diagram — Pay booking and send confirmation email
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant P as protect + authorize
+    participant C as controllers/bookings
+    participant B as Booking model
+    participant RC as utils/receipt
+    participant M as utils/mailer
+    participant E as Email service (SMTP / Ethereal)
+
+    U->>P: POST /api/v1/bookings/:id/pay {method, cardNumber}
+    P->>C: payBooking(req, res)
+    C->>C: parsePayment(): method card or promptpay, card = 16 digits
+    alt invalid input
+        C-->>U: 400 Bad Request
+    else card ends with 0000 (mock decline)
+        C-->>U: 402 Payment declined
+    end
+    C->>B: findOne({_id, user: req.user}).populate(hotel)
+    alt not found or not the owner
+        C-->>U: 404 Not found
+    else already paid
+        C-->>U: 409 Already paid
+    end
+    C->>C: amount = nights × hotel.pricePerNight (server side)
+    C->>B: findOneAndUpdate({status: pending} → {status: paid, payment})
+    Note over C,B: atomic update: a double submit cannot pay twice
+    C->>RC: sendBookingConfirmation(booking, user)
+    RC->>RC: QRCode.toBuffer("HOTELBOOKING|id|reference")
+    RC->>RC: receiptHtml(booking, user)
+    RC->>M: sendMail(to user.email, HTML receipt, QR inline, receipt attached)
+    M->>E: SMTP send
+    E-->>M: accepted (+ preview URL on Ethereal)
+    M-->>C: {sent: true, previewUrl}
+    C-->>U: 200 {booking (paid), email}

@@ -1,0 +1,69 @@
+---
+title: Class Diagram — Data model (MongoDB / Mongoose)
+---
+classDiagram
+    direction LR
+
+    class User {
+        -ObjectId _id
+        -String name
+        -String tel
+        -String email
+        -String role  [user | admin]
+        -String password  [bcrypt hash]
+        -Date createdAt
+        +getSignedJwtToken() String
+        +matchPassword(entered: String) Boolean
+    }
+
+    class Hotel {
+        -ObjectId _id
+        -String name
+        -String address
+        -String tel
+        -Number totalRooms
+        -Number pricePerNight
+        -Number lockVersion
+        -Date createdAt
+    }
+
+    class Booking {
+        -ObjectId _id
+        -Date checkIn
+        -Date checkOut
+        -String status  [pending | paid]
+        -Payment payment
+        -Date deletedAt  [soft delete]
+        -Date createdAt
+    }
+
+    class Payment {
+        <<embedded>>
+        -Number amount  [nights x pricePerNight]
+        -String method  [card | promptpay]
+        -String reference
+        -Date paidAt
+    }
+
+    class RefreshToken {
+        -ObjectId _id
+        -String tokenHash  [SHA-256]
+        -Date revokedAt
+        -Date expiresAt  [TTL]
+    }
+
+    class AuditLog {
+        -ObjectId _id
+        -String action
+        -ObjectId target
+        -Mixed before
+        -Mixed after
+        -Date createdAt
+    }
+
+    User "1" --> "0..*" Booking : makes
+    Hotel "1" --> "0..*" Booking : has
+    Booking *-- "0..1" Payment : contains
+    User "1" --> "0..*" RefreshToken : owns
+    User "1" --> "0..*" AuditLog : actor (admin)
+    AuditLog ..> Booking : target

@@ -1,0 +1,42 @@
+---
+title: Sequence Diagram — Create booking
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant R as routes/hotels → routes/bookings
+    participant P as protect + authorize
+    participant L as bookingLimiter
+    participant C as controllers/bookings
+    participant H as Hotel model
+    participant B as Booking model
+    participant DB as MongoDB (transaction)
+
+    U->>R: POST /api/v1/hotels/:hotelId/bookings {checkIn, checkOut}
+    R->>P: verify JWT (cookie or Bearer), load user
+    alt no / invalid token
+        P-->>U: 401 Not authorized
+    end
+    P->>L: count attempts for this user (5 per minute)
+    alt 6th attempt within a minute
+        L-->>U: 429 + Retry-After
+    end
+    L->>C: addBooking(req, res)
+    C->>C: parseStay(): 1–3 nights, check-in not in the past
+    alt invalid stay
+        C-->>U: 400 A booking must be between 1 and 3 nights
+    end
+    C->>DB: startSession() + withTransaction()
+    C->>H: findByIdAndUpdate(hotelId, $inc lockVersion)
+    Note over H,DB: two bookings for the same hotel write the same document,<br/>so concurrent transactions conflict and retry (no overbooking)
+    alt hotel not found
+        C-->>U: 404 No hotel with this id
+    end
+    C->>B: countDocuments(overlapping dates, not deleted)
+    alt booked rooms ≥ totalRooms
+        C-->>U: 409 No rooms available
+    end
+    C->>B: create({checkIn, checkOut, user: req.user, hotel})
+    B->>DB: insert booking (status = pending)
+    DB-->>C: commit
+    C-->>U: 201 Created {booking}
