@@ -17,5 +17,10 @@ exports.validateStay = (checkIn, checkOut, now = new Date()) => {
     return null;
 };
 
+exports.nights = (checkIn, checkOut) => Math.round((new Date(checkOut) - new Date(checkIn)) / DAY);
+
+// Price is always computed on the server from the stored booking and hotel, never taken from the client.
+exports.stayAmount = (checkIn, checkOut, pricePerNight) => exports.nights(checkIn, checkOut) * pricePerNight;
+
 // Stays [in,out) overlap an existing one when existing.in < out && existing.out > in.
 exports.overlapFilter = (checkIn, checkOut) => ({ checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } });

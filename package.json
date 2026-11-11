@@ -19,8 +19,10 @@
     "test": "node --test \"test/**/*.test.js\"",
     "dev": "nodemon server.js",
     "seed": "node seed.js",
-    "demo": "newman run postman/hotel-booking.postman_collection.json -e postman/local.postman_environment.json --folder \"Demo (Steps 1-12)\" -r cli,htmlextra --reporter-htmlextra-export postman/report.html",
-    "demo:ratelimit": "newman run postman/hotel-booking.postman_collection.json -e postman/local.postman_environment.json --folder \"Extra - Rate limit 5 booking attempts per minute\""
+    "demo": "node postman/run.js demo",
+    "demo:ratelimit": "node postman/run.js ratelimit",
+    "demo:payment": "node postman/run.js payment",
+    "postman:generate": "node postman/generate.js"
   },
   "dependencies": {
     "@exortek/express-mongo-sanitize": "^4.0.0",
@@ -37,10 +39,14 @@
     "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.4",
+    "nodemailer": "^10.5.0",
+    "qrcode": "^1.5.4",
     "swagger-jsdoc": "^6.0.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "newman": "^6.2.3",
+    "newman-reporter-htmlextra": "^1.23.1",
     "nodemon": "^3.1.14"
   }
 }

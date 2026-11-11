@@ -2,3 +2,7 @@ node_modules/*
 
 config/config.env
 postman/report*.html
+# any env file with real values (only *.example templates are committed)
+*.env
+.env*
+!*.env.example

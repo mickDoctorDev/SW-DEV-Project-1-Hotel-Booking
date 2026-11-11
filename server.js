@@ -12,6 +12,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUI = require('swagger-ui-express');
 
 dotenv.config({ path: "./config/config.env" });
+require('./config/checkEnv')();
 
 connectDB();
 
