@@ -8,6 +8,7 @@ import Hotels from './pages/Hotels'
 import BookHotel from './pages/BookHotel'
 import Bookings from './pages/Bookings'
 import Pay from './pages/Pay'
+import CheckIn from './pages/CheckIn'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -24,6 +25,7 @@ function App() {
             <Route path='/hotels/:hotelId/book' element={<PrivateRoute><BookHotel /></PrivateRoute>} />
             <Route path='/bookings' element={<PrivateRoute><Bookings /></PrivateRoute>} />
             <Route path='/bookings/:id/pay' element={<PrivateRoute><Pay /></PrivateRoute>} />
+            <Route path='/checkin' element={<PrivateRoute role='admin'><CheckIn /></PrivateRoute>} />
             <Route path='*' element={<Navigate to='/' replace />} />
           </Routes>
         </div>

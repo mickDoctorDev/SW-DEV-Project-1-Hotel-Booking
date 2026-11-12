@@ -204,11 +204,12 @@ const demo = folder('Demo (Steps 1-12)', [
     ]),
 ]);
 
-// Additional Req 1 demo. Run separately, at least 1 minute after the main demo.
+// Additional Req 1 demo. Registers its own fresh user, so it can run any time (no waiting for other demos).
 const rate = folder('Extra - Rate limit 5 booking attempts per minute', [
-    req('Login user', 'POST', '/auth/login', {
-        auth: false, body: { email: '{{seedUserEmail}}', password: '{{seedUserPassword}}' },
-        test: `${status(200)}
+    req('Register a fresh user', 'POST', '/auth/register', {
+        auth: false, body: { name: 'Rate Limit Demo', tel: '0812345678', email: 'ratelimit{{rlRun}}@test.com', password: 'Demo12345' },
+        pre: `pm.collectionVariables.set('rlRun', Date.now());`,
+        test: `${status(201)}
     pm.collectionVariables.set('token', pm.response.json().token);
     pm.collectionVariables.set('attempt', 0);`,
     }),
@@ -351,6 +352,28 @@ const adminStatus = folder('Admin - booking status', [
 
 // Regression checks for the account features (admin create user, forgot password, delete-me). Uses 1 booking attempt.
 const security = folder('Security - account features', [
+    req('Wrong password (repeats 11x)', 'POST', '/auth/login', {
+        auth: false, body: { email: 'victim{{bfRun}}@test.com', password: 'Guess{{bfAttempt}}x' },
+        pre: `
+    if (!pm.collectionVariables.get('bfRun')) { pm.collectionVariables.set('bfRun', Date.now()); pm.collectionVariables.set('bfAttempt', 0); }
+    pm.collectionVariables.set('bfAttempt', Number(pm.collectionVariables.get('bfAttempt')) + 1);`,
+        test: `
+    const n = Number(pm.collectionVariables.get('bfAttempt'));
+    if (n <= 10) {
+        pm.test('Wrong password ' + n + ' -> 401', () => pm.response.to.have.status(401));
+        postman.setNextRequest('Wrong password (repeats 11x)');
+    } else {
+        pm.test('11th guess on the same account is blocked (429)', () => pm.response.to.have.status(429));
+        pm.test('Retry-After header present', () => pm.response.to.have.header('Retry-After'));
+        pm.collectionVariables.unset('bfRun');
+        postman.setNextRequest('Other accounts can still log in');
+    }`,
+    }),
+    req('Other accounts can still log in', 'POST', '/auth/login', {
+        auth: false, body: { email: '{{seedUserEmail}}', password: '{{seedUserPassword}}' },
+        test: `${status(200, 'Only the attacked account is locked (200)')}
+    pm.collectionVariables.unset('token');`,
+    }),
     req('Forgot password, unknown email -> same 200 answer', 'POST', '/auth/forgotpassword', {
         auth: false, body: { email: 'nobody{{secRun}}@test.com' },
         pre: `pm.collectionVariables.set('secRun', Date.now());`,
@@ -468,13 +491,94 @@ const chat = folder('Extra - AI chatbot', [
     }),
 ]);
 
+// Verification token: the QR code carries an HMAC-signed check-in code. Uses 1 booking attempt.
+const checkin = folder('Extra - Check-in QR verification', [
+    req('Login user', 'POST', '/auth/login', {
+        auth: false, body: { email: '{{seedUserEmail}}', password: '{{seedUserPassword}}' },
+        test: `${status(200)}
+    pm.collectionVariables.set('token', pm.response.json().token);`,
+    }),
+    req('Book a stay', 'POST', '/hotels/{{hotelId}}/bookings', {
+        body: { checkIn: '{{checkIn}}', checkOut: '{{checkOut}}' },
+        pre: `
+    pm.collectionVariables.set('dayBase', 30 + Math.floor(Math.random() * 300));${DATE_FN}
+    pm.variables.set('checkIn', d(base)); pm.variables.set('checkOut', d(base + 1));
+    if (!pm.collectionVariables.get('hotelId')) {
+        pm.sendRequest(pm.environment.get('baseUrl') + '/hotels', (e, r) => pm.collectionVariables.set('hotelId', r.json().data[0]._id));
+    }`,
+        test: `${status(201)}
+    pm.collectionVariables.set('ciBookingId', pm.response.json().data._id);`,
+    }),
+    req('Pay -> response carries the signed check-in code', 'POST', '/bookings/{{ciBookingId}}/pay', {
+        body: { method: 'promptpay' },
+        test: `${status(200)}
+    const code = pm.response.json().checkinToken;
+    pm.test('Check-in code = HB1.<booking>.<payment ref>.<HMAC signature>', () => pm.expect(code).to.match(/^HB1\\.[a-f0-9]{24}\\.PAY-[A-F0-9]{12}\\.[A-Za-z0-9_-]{43}$/));
+    pm.collectionVariables.set('ciCode', code);
+    console.log('QR code content: ' + code);`,
+    }),
+    req('Guest cannot use the staff check-in -> 403', 'POST', '/bookings/checkin', {
+        body: { token: '{{ciCode}}' }, test: status(403, 'Staff (admin) only (403)'),
+    }),
+    req('Login admin (hotel staff)', 'POST', '/auth/login', {
+        auth: false, body: { email: '{{adminEmail}}', password: '{{adminPassword}}' },
+        test: `${status(200)}
+    pm.collectionVariables.set('token', pm.response.json().token);`,
+    }),
+    req('Forged code: signature edited -> 400', 'POST', '/bookings/checkin', {
+        body: { token: '{{forged}}' },
+        pre: `
+    const c = pm.collectionVariables.get('ciCode');
+    pm.variables.set('forged', c.slice(0, -1) + (c.endsWith('A') ? 'B' : 'A'));`,
+        test: `${status(400)}
+    pm.test('Rejected as not genuine', () => pm.expect(pm.response.json().valid).to.eql(false));`,
+    }),
+    req('Forged code: another booking id with the same signature -> 400', 'POST', '/bookings/checkin', {
+        body: { token: '{{forged}}' },
+        pre: `
+    const [p, id, ref, sig] = pm.collectionVariables.get('ciCode').split('.');
+    const otherId = id.slice(0, -1) + (id.endsWith('0') ? '1' : '0');
+    pm.variables.set('forged', [p, otherId, ref, sig].join('.'));`,
+        test: status(400, 'Changing the booking id breaks the signature (400)'),
+    }),
+    req('Genuine code -> guest checked in', 'POST', '/bookings/checkin', {
+        body: { token: '{{ciCode}}' },
+        test: `${status(200)}
+    const r = pm.response.json();
+    pm.test('Valid, shows guest and stay, records check-in time', () => {
+        pm.expect(r.valid).to.eql(true);
+        pm.expect(r.data.guest.name).to.be.a('string');
+        pm.expect(r.data.hotel).to.be.a('string');
+        pm.expect(r.data.checkedInAt).to.be.a('string');
+    });`,
+    }),
+    req('Same code scanned again -> 409 already checked in', 'POST', '/bookings/checkin', {
+        body: { token: '{{ciCode}}' },
+        test: `${status(409)}
+    pm.test('Reported as already checked in', () => pm.expect(pm.response.json().alreadyCheckedIn).to.eql(true));`,
+    }),
+    req('Admin undoes the payment', 'PATCH', '/bookings/{{ciBookingId}}/status', {
+        body: { status: 'pending' }, test: status(200),
+    }),
+    req('Old code after the payment was undone -> 409', 'POST', '/bookings/checkin', {
+        body: { token: '{{ciCode}}' },
+        test: `${status(409)}
+    pm.test('No longer valid', () => pm.expect(pm.response.json().valid).to.eql(false));`,
+    }),
+    req('Clean up: delete the booking', 'DELETE', '/bookings/{{ciBookingId}}', { test: status(200) }),
+    req('Admin logout', 'POST', '/auth/logout', {
+        test: `${status(200)}
+    pm.collectionVariables.unset('token');`,
+    }),
+]);
+
 const collection = {
     info: {
         name: 'Hotel Booking - Presentation Demo',
         description: 'Steps 1-12 of the presentation sheet. Run with Newman (see package.json "demo" script). Requires `node seed.js` first.',
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
-    item: [demo, pay, chat, adminStatus, security, rate],
+    item: [demo, pay, chat, rate, checkin, adminStatus, security],
     variable: [{ key: 'runId', value: '' }, { key: 'dayBase', value: '60' }],
 };
 const environment = {

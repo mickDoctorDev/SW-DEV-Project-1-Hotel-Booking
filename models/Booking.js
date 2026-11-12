@@ -13,6 +13,7 @@ const BookingSchema = new mongoose.Schema({
         reference: String,     // mock transaction id, also encoded in the check-in QR code
         paidAt: Date,
     },
+    checkedInAt: { type: Date, default: null }, // set once, when hotel staff verify the QR code
     deletedAt: { type: Date, default: null, select: false },
     createdAt: { type: Date, default: Date.now }
 });

@@ -307,3 +307,13 @@ h3 {
 /* admin status dropdown on a booking card */
 .status-select { border: none; border-radius: 10px; color: #fff; font-family: inherit; font-size: 13px; padding: 3px 10px; cursor: pointer; }
 .status-select option { color: #000; background: #fff; }
+
+/* admin check-in page */
+textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; width: 100%; padding: 10px; border: 1px solid #e6e6e6; border-radius: 5px; resize: vertical; }
+.checkin-result { margin-bottom: 40px; border-width: 2px; }
+.checkin-result h3 { display: flex; align-items: center; gap: 8px; }
+.checkin-result.ok { border-color: #1a7f37; } .checkin-result.ok h3 { color: #1a7f37; }
+.checkin-result.already { border-color: #b26a00; } .checkin-result.already h3 { color: #b26a00; }
+.checkin-result.invalid { border-color: darkred; } .checkin-result.invalid h3 { color: darkred; }
+.mono { font-family: ui-monospace, Consolas, monospace; }
+.code-box { word-break: break-all; background: #f4f4f4; padding: 8px; border-radius: 5px; user-select: all; }

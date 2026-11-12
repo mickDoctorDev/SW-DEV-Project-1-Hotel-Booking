@@ -29,7 +29,7 @@ sequenceDiagram
     C->>B: findOneAndUpdate({status: pending} → {status: paid, payment})
     Note over C,B: atomic update: a double submit cannot pay twice
     C->>RC: sendBookingConfirmation(booking, user)
-    RC->>RC: QRCode.toBuffer("HOTELBOOKING|id|reference")
+    RC->>RC: QR = signed check-in code HB1.id.reference.HMAC(secret)
     RC->>RC: receiptHtml(booking, user)
     RC->>M: sendMail(to user.email, HTML receipt, QR inline, receipt attached)
     M->>E: SMTP send

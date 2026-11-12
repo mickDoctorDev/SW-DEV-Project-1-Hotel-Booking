@@ -5,6 +5,7 @@ const Hotel = require('../models/Hotel');
 const { toDay, validateStay, overlapFilter, stayAmount } = require('../utils/booking');
 const { audit } = require('../utils/audit');
 const { sendBookingConfirmation, receiptHtml, qrDataUrl } = require('../utils/receipt');
+const { createCheckinToken, verifyCheckinToken } = require('../utils/checkinToken');
 
 const POPULATE = { path: 'hotel', select: 'name address tel pricePerNight' };
 
@@ -160,7 +161,7 @@ exports.payBooking = async (req, res) => {
         if (!paid) throw new HttpError(409, 'This booking is already paid');
 
         const email = await sendBookingConfirmation(paid, req.user);
-        res.status(200).json({ success: true, data: paid, email });
+        res.status(200).json({ success: true, data: paid, email, checkinToken: createCheckinToken(paid) });
     } catch (error) {
         sendError(res, error, 'Cannot process payment');
     }
@@ -209,5 +210,47 @@ exports.setBookingStatus = async (req, res) => {
         res.status(200).json({ success: true, data: updated });
     } catch (error) {
         sendError(res, error, 'Cannot change booking status');
+    }
+}
+
+const checkinSummary = (b) => ({
+    bookingId: b._id,
+    guest: b.user ? { name: b.user.name, tel: b.user.tel } : null,
+    hotel: b.hotel ? b.hotel.name : null,
+    checkIn: b.checkIn,
+    checkOut: b.checkOut,
+    amount: b.payment && b.payment.amount,
+    reference: b.payment && b.payment.reference,
+    checkedInAt: b.checkedInAt,
+});
+
+//@route POST /api/v1/bookings/checkin   (admin / hotel staff) body: { token }  — the code from the QR
+// Verifies the signed check-in token and records the check-in once. A forged or altered code, a cancelled
+// booking, an undone payment or a second scan of the same code are all rejected.
+exports.checkIn = async (req, res) => {
+    try {
+        const parsed = verifyCheckinToken(req.body && req.body.token);
+        if (!parsed) return res.status(400).json({ success: false, valid: false, message: 'Invalid check-in code (not issued by this system or altered)' });
+
+        const POP = [POPULATE, { path: 'user', select: 'name tel' }];
+        const booking = await Booking.findOne({ _id: parsed.bookingId, deletedAt: null }).populate(POP);
+        if (!booking) return res.status(404).json({ success: false, valid: false, message: 'This booking was cancelled or does not exist' });
+        if (booking.status !== 'paid' || !booking.payment || booking.payment.reference !== parsed.reference) {
+            return res.status(409).json({ success: false, valid: false, message: 'This code is no longer valid: the payment was changed or undone' });
+        }
+
+        // atomic: only the first scan checks the guest in
+        const updated = await Booking.findOneAndUpdate(
+            { _id: booking._id, deletedAt: null, status: 'paid', 'payment.reference': parsed.reference, checkedInAt: null },
+            { checkedInAt: new Date() },
+            { returnDocument: 'after' }
+        ).populate(POP);
+        if (!updated) {
+            return res.status(409).json({ success: false, valid: true, alreadyCheckedIn: true, message: 'This guest has already checked in', data: checkinSummary(booking) });
+        }
+        audit(req.user._id, 'booking.checkin', updated._id, { checkedInAt: null }, { checkedInAt: updated.checkedInAt });
+        res.status(200).json({ success: true, valid: true, message: 'Valid code: guest checked in', data: checkinSummary(updated) });
+    } catch (error) {
+        sendError(res, error, 'Cannot verify check-in code');
     }
 }

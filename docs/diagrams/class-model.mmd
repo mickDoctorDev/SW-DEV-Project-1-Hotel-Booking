@@ -33,6 +33,7 @@ classDiagram
         -Date checkOut
         -String status  [pending | paid]
         -Payment payment
+        -Date checkedInAt  [set once at check-in]
         -Date deletedAt  [soft delete]
         -Date createdAt
     }
@@ -40,7 +41,7 @@ classDiagram
     class Payment {
         <<embedded>>
         -Number amount  [nights x pricePerNight]
-        -String method  [card | promptpay]
+        -String method  [card | promptpay | hotel]
         -String reference
         -Date paidAt
     }
