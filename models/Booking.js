@@ -9,7 +9,7 @@ const BookingSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'paid'], default: 'pending' },
     payment: {
         amount: Number,        // THB, computed on the server: nights x hotel.pricePerNight
-        method: { type: String, enum: ['card', 'promptpay'] },
+        method: { type: String, enum: ['card', 'promptpay', 'hotel'] }, // hotel = marked paid by an admin (paid at the front desk)
         reference: String,     // mock transaction id, also encoded in the check-in QR code
         paidAt: Date,
     },

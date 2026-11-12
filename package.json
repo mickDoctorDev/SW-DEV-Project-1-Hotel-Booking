@@ -24,7 +24,8 @@
     "demo:payment": "node postman/run.js payment",
     "postman:generate": "node postman/generate.js",
     "demo:security": "node postman/run.js security",
-    "demo:chat": "node postman/run.js chat"
+    "demo:chat": "node postman/run.js chat",
+    "demo:admin": "node postman/run.js admin"
   },
   "dependencies": {
     "@exortek/express-mongo-sanitize": "^4.0.0",

@@ -64,6 +64,21 @@ function Bookings() {
     }
   }
 
+  // admin only: mark as paid at the front desk, or undo a payment
+  const changeStatus = async (b, next) => {
+    const question = next === 'paid'
+      ? `Mark the booking at ${b.hotel?.name} as paid at the hotel?`
+      : `Undo the payment for the booking at ${b.hotel?.name}? Its payment details will be removed.`
+    if (!window.confirm(question)) return
+    try {
+      const res = await api.patch(`/bookings/${b._id}/status`, { status: next })
+      toast.success(next === 'paid' ? 'Marked as paid' : 'Payment undone')
+      setBookings((list) => list.map((x) => (x._id === b._id ? { ...x, ...res.data.data, user: x.user } : x)))
+    } catch (err) {
+      toast.error(errorMessage(err))
+    }
+  }
+
   if (loading) return <Spinner />
 
   return (
@@ -112,7 +127,19 @@ function Bookings() {
                 </p>
               </div>
               <div className='booking-side'>
-                <span className={`status status-${b.status}`}>{b.status === 'paid' ? 'Paid' : 'Waiting for payment'}</span>
+                {isAdmin ? (
+                  <select
+                    className={`status-select status-${b.status}`}
+                    value={b.status}
+                    onChange={(e) => changeStatus(b, e.target.value)}
+                    aria-label={`Status of booking ${b._id}`}
+                  >
+                    <option value='pending'>Waiting for payment</option>
+                    <option value='paid'>Paid</option>
+                  </select>
+                ) : (
+                  <span className={`status status-${b.status}`}>{b.status === 'paid' ? 'Paid' : 'Waiting for payment'}</span>
+                )}
                 <p className='price'>{baht(b.payment?.amount ?? nights * (b.hotel?.pricePerNight || 0))}</p>
               </div>
 

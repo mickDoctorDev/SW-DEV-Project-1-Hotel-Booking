@@ -9,6 +9,7 @@ const FOLDERS = {
     demo: 'Demo (Steps 1-12)',
     payment: 'Extra - Payment, QR code and email receipt',
     chat: 'Extra - AI chatbot',
+    admin: 'Admin - booking status',
     security: 'Security - account features',
     ratelimit: 'Extra - Rate limit 5 booking attempts per minute',
 };

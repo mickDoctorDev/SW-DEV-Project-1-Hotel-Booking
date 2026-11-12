@@ -32,7 +32,7 @@ exports.receiptHtml = (booking, user, qrSrc) => {
     ${row('Check-out', day(booking.checkOut))}
     ${row('Nights', n)}
     ${row('Price per night', baht(h.pricePerNight))}
-    ${row('Payment method', p.method === 'card' ? 'Credit card' : 'PromptPay')}
+    ${row('Payment method', { card: 'Credit card', promptpay: 'PromptPay', hotel: 'Paid at the hotel' }[p.method] || p.method)}
     ${row('Reference', esc(p.reference))}
     ${row('Paid at', new Date(p.paidAt).toUTCString())}
     <tr><td style="padding:10px 0;border-top:1px solid #ddd;font-weight:bold">Total paid</td>

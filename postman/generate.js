@@ -290,6 +290,65 @@ const pay = folder('Extra - Payment, QR code and email receipt', [
     req('Clean up: delete the paid booking', 'DELETE', '/bookings/{{payBookingId}}', { test: status(200) }),
 ]);
 
+// Admin changes a booking's status (paid at the front desk / undo payment). Uses 1 booking attempt.
+const adminStatus = folder('Admin - booking status', [
+    req('Login user', 'POST', '/auth/login', {
+        auth: false, body: { email: '{{seedUserEmail}}', password: '{{seedUserPassword}}' },
+        test: `${status(200)}
+    pm.collectionVariables.set('token', pm.response.json().token);`,
+    }),
+    req('User books a stay (pending)', 'POST', '/hotels/{{hotelId}}/bookings', {
+        body: { checkIn: '{{checkIn}}', checkOut: '{{checkOut}}' },
+        pre: `
+    pm.collectionVariables.set('dayBase', 30 + Math.floor(Math.random() * 300));${DATE_FN}
+    pm.variables.set('checkIn', d(base)); pm.variables.set('checkOut', d(base + 2));
+    if (!pm.collectionVariables.get('hotelId')) {
+        pm.sendRequest(pm.environment.get('baseUrl') + '/hotels', (e, r) => pm.collectionVariables.set('hotelId', r.json().data[0]._id));
+    }`,
+        test: `${status(201)}
+    pm.collectionVariables.set('statusBookingId', pm.response.json().data._id);`,
+    }),
+    req('User cannot change status -> 403', 'PATCH', '/bookings/{{statusBookingId}}/status', {
+        body: { status: 'paid' }, test: status(403, 'Admins only (403)'),
+    }),
+    req('Login admin', 'POST', '/auth/login', {
+        auth: false, body: { email: '{{adminEmail}}', password: '{{adminPassword}}' },
+        test: `${status(200)}
+    pm.collectionVariables.set('token', pm.response.json().token);`,
+    }),
+    req('Unknown status -> 400', 'PATCH', '/bookings/{{statusBookingId}}/status', {
+        body: { status: 'cancelled' }, test: status(400, 'Only pending/paid (400)'),
+    }),
+    req('Admin marks as paid at the hotel', 'PATCH', '/bookings/{{statusBookingId}}/status', {
+        body: { status: 'paid' },
+        test: `${status(200)}
+    const b = pm.response.json().data;
+    pm.test('Paid at the hotel, amount computed by the server', () => {
+        pm.expect(b.status).to.eql('paid');
+        pm.expect(b.payment.method).to.eql('hotel');
+        pm.expect(b.payment.amount).to.eql(2 * b.hotel.pricePerNight);
+    });`,
+    }),
+    req('Same status again -> 409', 'PATCH', '/bookings/{{statusBookingId}}/status', {
+        body: { status: 'paid' }, test: status(409, 'No-op change rejected (409)'),
+    }),
+    req('Admin can open the receipt', 'GET', '/bookings/{{statusBookingId}}/receipt', {
+        test: `${status(200)}
+    pm.test('Receipt says paid at the hotel', () => pm.expect(pm.response.text()).to.include('Paid at the hotel'));`,
+    }),
+    req('Admin undoes the payment', 'PATCH', '/bookings/{{statusBookingId}}/status', {
+        body: { status: 'pending' },
+        test: `${status(200)}
+    const b = pm.response.json().data;
+    pm.test('Back to pending, payment removed', () => { pm.expect(b.status).to.eql('pending'); pm.expect(b.payment).to.be.undefined; });`,
+    }),
+    req('Clean up: admin deletes the booking', 'DELETE', '/bookings/{{statusBookingId}}', { test: status(200) }),
+    req('Admin logout', 'POST', '/auth/logout', {
+        test: `${status(200)}
+    pm.collectionVariables.unset('token');`,
+    }),
+]);
+
 // Regression checks for the account features (admin create user, forgot password, delete-me). Uses 1 booking attempt.
 const security = folder('Security - account features', [
     req('Forgot password, unknown email -> same 200 answer', 'POST', '/auth/forgotpassword', {
@@ -415,7 +474,7 @@ const collection = {
         description: 'Steps 1-12 of the presentation sheet. Run with Newman (see package.json "demo" script). Requires `node seed.js` first.',
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
-    item: [demo, pay, chat, security, rate],
+    item: [demo, pay, chat, adminStatus, security, rate],
     variable: [{ key: 'runId', value: '' }, { key: 'dayBase', value: '60' }],
 };
 const environment = {

@@ -177,3 +177,37 @@ exports.getReceipt = async (req, res) => {
         sendError(res, error, 'Cannot create receipt');
     }
 }
+
+//@route PATCH /api/v1/bookings/:id/status   (admin only) body: { status: 'pending' | 'paid' }
+// paid    = guest paid at the front desk: the amount is computed from the stored stay, like an online payment
+// pending = undo a payment (e.g. a refund): the payment details are removed
+// Every change is written to the audit log.
+exports.setBookingStatus = async (req, res) => {
+    try {
+        const status = req.body && req.body.status;
+        if (status !== 'pending' && status !== 'paid') throw new HttpError(400, "status must be 'pending' or 'paid'");
+
+        const booking = await Booking.findOne({ _id: req.params.id, deletedAt: null }).populate(POPULATE);
+        if (!booking || !booking.hotel) throw new HttpError(404, `No booking with the id of ${req.params.id}`);
+        if (booking.status === status) throw new HttpError(409, `Booking is already ${status}`);
+
+        const update = status === 'paid'
+            ? {
+                status, payment: {
+                    amount: stayAmount(booking.checkIn, booking.checkOut, booking.hotel.pricePerNight),
+                    method: 'hotel',
+                    reference: 'ADM-' + crypto.randomBytes(6).toString('hex').toUpperCase(),
+                    paidAt: new Date(),
+                },
+            }
+            : { status, $unset: { payment: 1 } };
+        // only change it if nobody else changed the status in the meantime
+        const updated = await Booking.findOneAndUpdate({ _id: booking._id, deletedAt: null, status: booking.status }, update, { returnDocument: 'after' }).populate(POPULATE);
+        if (!updated) throw new HttpError(409, 'The booking was changed by someone else, please reload');
+
+        audit(req.user._id, 'booking.status', booking._id, { status: booking.status, payment: booking.payment }, { status, payment: updated.payment });
+        res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+        sendError(res, error, 'Cannot change booking status');
+    }
+}
