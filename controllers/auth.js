@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require("../models/User");
 const RefreshToken = require("../models/RefreshToken");
 const Booking = require("../models/Booking");
@@ -111,6 +112,9 @@ exports.logout = async (req, res) => {
 exports.createUserByAdmin = async (req, res) => {
     try {
         const { name, tel, email, password, role } = req.body;
+        if (role !== undefined && role !== 'user' && role !== 'admin') {
+            return res.status(400).json({ success: false, message: "role must be 'user' or 'admin'" });
+        }
 
         const user = await User.create({
             name,
@@ -141,19 +145,25 @@ exports.createUserByAdmin = async (req, res) => {
 // @route   DELETE /api/v1/auth/delete-me
 // @access  Private
 exports.deleteMe = async (req, res) => {
+    const session = await mongoose.startSession();
     try {
         const userId = req.user.id;
 
-        // 1. Delete associated refresh tokens
-        await RefreshToken.deleteMany({ user: userId });
+        // Paid upcoming stays are a financial record the hotel still has to honour: refuse instead of deleting them.
+        const activePaid = await Booking.exists({ user: userId, deletedAt: null, status: 'paid', checkOut: { $gt: new Date() } });
+        if (activePaid) {
+            return res.status(409).json({ success: false, message: 'You have paid upcoming bookings. Please contact support before deleting your account.' });
+        }
 
-        // 2. Delete user's bookings
-        await Booking.deleteMany({ user: userId });
+        // All-or-nothing: bookings are soft-deleted (kept for records, like every other booking delete),
+        // sessions are revoked and the user is removed.
+        await session.withTransaction(async () => {
+            await Booking.updateMany({ user: userId, deletedAt: null }, { deletedAt: new Date() }, { session });
+            await RefreshToken.deleteMany({ user: userId }, { session });
+            await User.findByIdAndDelete(userId, { session });
+        });
 
-        // 3. Delete user
-        await User.findByIdAndDelete(userId);
-
-        // 4. Clear cookies
+        // Clear cookies
         res.clearCookie('token', cookieBase());
         res.clearCookie('refreshToken', { ...cookieBase(), path: '/api/v1/auth' });
 
@@ -164,53 +174,42 @@ exports.deleteMe = async (req, res) => {
         });
     } catch {
         res.status(500).json({ success: false, message: 'Cannot delete user account' });
+    } finally {
+        await session.endSession();
     }
 };
 
 // @desc    Forgot Password - request reset token & send email
 // @route   POST /api/v1/auth/forgotpassword
 // @access  Public
+// Security: the reset token is delivered ONLY by email (returning it would let anyone who knows an address
+// take over that account), and the answer is identical whether or not the email is registered (no account enumeration).
+const FORGOT_RESPONSE = { success: true, message: 'If that email is registered, a password reset link has been sent' };
+
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     try {
         const user = await User.findOne({ email: email.toLowerCase().trim() });
+        if (!user) return res.status(200).json(FORGOT_RESPONSE);
 
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'There is no user with that email' });
-        }
-
-        // Get reset token
+        // Get reset token (only its SHA-256 hash is stored)
         const resetToken = user.getResetPasswordToken();
         await user.save({ validateBeforeSave: false });
 
-        // Create reset URL
-        const clientOrigin = process.env.CLIENT_ORIGIN || `${req.protocol}://${req.get('host')}`;
-        const resetUrl = `${clientOrigin}/resetpassword/${resetToken}`;
+        // The API endpoint that accepts the new password (there is no reset page in the frontend)
+        const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/resetpassword/${resetToken}`;
+        const message = `You are receiving this email because you (or someone else) requested a password reset.\n\nPlease reset your password by submitting a PUT request with your new password ({ "password": "..." }) to:\n\n${resetUrl}\n\nThis link is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
 
-        const message = `You are receiving this email because you (or someone else) requested a password reset.\n\nPlease reset your password by submitting a PUT request with your new password to:\n\n${resetUrl}\n\nThis link is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
-
-        try {
-            await sendEmail({
-                email: user.email,
-                subject: 'Password Reset Request',
-                message
-            });
-
-            res.status(200).json({
-                success: true,
-                message: 'Password reset email sent',
-                resetToken,
-                resetUrl
-            });
-        } catch (emailErr) {
-            console.error('Email error:', emailErr);
+        // Answer first and send the email in the background: waiting for SMTP would make real addresses
+        // noticeably slower than unknown ones, which leaks the same information as a 404 would.
+        res.status(200).json(FORGOT_RESPONSE);
+        sendEmail({ email: user.email, subject: 'Password Reset Request', message }).catch(async (emailErr) => {
+            console.error('Password reset email failed:', emailErr.message);
             user.resetPasswordToken = undefined;
             user.resetPasswordExpire = undefined;
-            await user.save({ validateBeforeSave: false });
-
-            return res.status(500).json({ success: false, message: 'Email could not be sent' });
-        }
+            await user.save({ validateBeforeSave: false }).catch(() => { });
+        });
     } catch {
         res.status(500).json({ success: false, message: 'Cannot process forgot password request' });
     }

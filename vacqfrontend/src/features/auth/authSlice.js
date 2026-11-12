@@ -1,13 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import authService from './authService'
-
-//Get user from localstorage
-//const user = JSON.parse(localStorage.getItem('user'))
-const user = localStorage.getItem('user')
+import authService, { loadUser, clearUser } from './authService'
 
 const initialState = {
-  user: (user && user !== 'null') ? user : null,
-  //user: null,
+  user: loadUser(), // { _id, name, email, role } or null
   isError: false,
   isSuccess: false,
   isLoading: false,
@@ -64,7 +59,12 @@ export const authSlice = createSlice({
       state.isError = false
       state.isSuccess = false
       state.message = ''
-    }
+    },
+    // the refresh token is no longer valid either, so the user has to log in again
+    sessionExpired: (state) => {
+      clearUser()
+      state.user = null
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -102,5 +102,5 @@ export const authSlice = createSlice({
   },
 })
 
-export const { reset } = authSlice.actions
+export const { reset, sessionExpired } = authSlice.actions
 export default authSlice.reducer

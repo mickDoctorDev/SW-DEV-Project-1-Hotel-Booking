@@ -5,6 +5,14 @@ const BookingSchema = new mongoose.Schema({
     checkOut: { type: Date, required: true },
     user: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
     hotel: { type: mongoose.Schema.ObjectId, ref: 'Hotel', required: true },
+    // pending = booked, waiting for payment; paid = mock payment succeeded (confirmation email sent)
+    status: { type: String, enum: ['pending', 'paid'], default: 'pending' },
+    payment: {
+        amount: Number,        // THB, computed on the server: nights x hotel.pricePerNight
+        method: { type: String, enum: ['card', 'promptpay', 'hotel'] }, // hotel = marked paid by an admin (paid at the front desk)
+        reference: String,     // mock transaction id, also encoded in the check-in QR code
+        paidAt: Date,
+    },
     deletedAt: { type: Date, default: null, select: false },
     createdAt: { type: Date, default: Date.now }
 });

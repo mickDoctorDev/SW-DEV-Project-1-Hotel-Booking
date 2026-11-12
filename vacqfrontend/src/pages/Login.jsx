@@ -57,7 +57,7 @@ function Login() {
         <h1>
           <FaSignInAlt /> Login
         </h1>
-        <p>Please login to get support</p>
+        <p>Log in to book and manage your stays</p>
       </section>
 
       <section className='form'>
@@ -87,7 +87,7 @@ function Login() {
             />
           </div>
           <div className='form-group'>
-            <button className='btn btn-block'>Submit</button>
+            <button className='btn btn-block' disabled={isLoading}>{isLoading ? 'Logging in…' : 'Submit'}</button>
           </div>
         </form>
       </section>

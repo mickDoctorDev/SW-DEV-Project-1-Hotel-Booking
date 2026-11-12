@@ -1,0 +1,53 @@
+// Use Case Diagram — Hotel Booking (render: dot -Tpng use-case.dot -o use-case.png)
+digraph UseCase {
+    rankdir=LR;
+    graph [fontname="Helvetica", fontsize=12, nodesep=0.25, ranksep=1.1, pad=0.3, bgcolor="white"];
+    node  [fontname="Helvetica", fontsize=11];
+    edge  [fontname="Helvetica", fontsize=9, arrowhead=none, color="#555555"];
+
+    // Actors (left)
+    guest [label="Guest\n(not registered)", shape=none, image="", fontsize=11];
+    user  [label="Registered User", shape=none];
+    admin [label="Admin", shape=none];
+
+    // External systems (right)
+    mail  [label="«system»\nEmail Service\n(SMTP / Ethereal)", shape=box, style="rounded", color="#888888"];
+    ai    [label="«system»\nGemini AI API", shape=box, style="rounded", color="#888888"];
+
+    subgraph cluster_system {
+        label="Hotel Booking System"; labeljust=l; fontsize=13; fontname="Helvetica-Bold";
+        style="rounded"; color="#333333"; margin=16;
+        node [shape=ellipse, style=filled, fillcolor="#eef4ff", color="#3b6fd8"];
+
+        register   [label="Register\n(name, tel, email, password)"];
+        login      [label="Log in"];
+        logout     [label="Log out"];
+        viewHotels [label="View hotel list\n(name, address, tel)"];
+        create     [label="Create booking\n(1–3 nights)"];
+        viewOwn    [label="View own bookings"];
+        editOwn    [label="Edit own booking"];
+        delOwn     [label="Delete own booking"];
+        pay        [label="Pay booking\n(mock payment)"];
+        confirm    [label="Send confirmation email\n(QR code + receipt)"];
+        chat       [label="Chat with\nsupport chatbot"];
+        rate       [label="Limit 5 booking\nattempts / minute", fillcolor="#fff4e5", color="#d98b1c"];
+        viewAny    [label="View any booking"];
+        editAny    [label="Edit any booking"];
+        delAny     [label="Delete any booking"];
+        manage     [label="Manage hotels"];
+    }
+
+    guest -> register;
+    guest -> viewHotels;
+    user -> login; user -> logout; user -> viewHotels;
+    user -> create; user -> viewOwn; user -> editOwn; user -> delOwn;
+    user -> pay; user -> chat;
+    admin -> login; admin -> logout;
+    admin -> viewAny; admin -> editAny; admin -> delAny; admin -> manage;
+
+    create -> rate  [style=dashed, arrowhead=open, label="«include»"];
+    editOwn -> rate [style=dashed, arrowhead=open, label="«include»"];
+    pay -> confirm  [style=dashed, arrowhead=open, label="«include»"];
+    confirm -> mail;
+    chat -> ai;
+}

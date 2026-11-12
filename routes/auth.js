@@ -16,5 +16,5 @@ router.delete('/delete-me', protect, deleteMe);
 router.post('/forgotpassword', authLimiter, validateForgotPassword, forgotPassword);
 router.put('/resetpassword/:resettoken', authLimiter, validateResetPassword, resetPassword);
 
-router.post('/create-user', protect, authorize('admin'), createUserByAdmin); //Admin create user (hotel admin)
+router.post('/create-user', protect, authorize('admin'), validateRegister, createUserByAdmin); //Admin create user (hotel admin)
 module.exports = router;

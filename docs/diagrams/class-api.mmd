@@ -1,0 +1,92 @@
+---
+title: Class Diagram — REST API resources
+---
+classDiagram
+    direction TB
+
+    class HotelBookingService {
+        <<Application>>
+        base URL /api/v1
+    }
+
+    class Auth {
+        <<Resource>>
+        +POST register() User
+        +POST login() token
+        +POST refresh() token
+        +GET getMe() User
+        +POST logout() void
+    }
+
+    class Hotels {
+        <<Resource>>
+        +GET getHotels() Hotel[]
+        +POST createHotel() Hotel  [admin]
+    }
+
+    class HotelById {
+        <<Resource>>
+        +GET getHotel() Hotel
+        +PUT updateHotel() Hotel  [admin]
+        +DELETE deleteHotel() void  [admin]
+    }
+
+    class HotelBookings {
+        <<Resource>>
+        /hotels/:hotelId/bookings
+        +POST addBooking() Booking
+    }
+
+    class Bookings {
+        <<Resource>>
+        +GET getBookings() Booking[]
+    }
+
+    class BookingById {
+        <<Resource>>
+        +GET getBooking() Booking
+        +PUT updateBooking() Booking
+        +DELETE deleteBooking() void
+        +POST payBooking() Booking
+        +GET getReceipt() HTML
+    }
+
+    class UserRep {
+        <<Representation>>
+        -name
+        -tel
+        -email
+        -role
+    }
+
+    class HotelRep {
+        <<Representation>>
+        -name
+        -address
+        -tel
+        -totalRooms
+        -pricePerNight
+    }
+
+    class BookingRep {
+        <<Representation>>
+        -checkIn
+        -checkOut
+        -status
+        -payment
+        -user
+        -hotel
+    }
+
+    HotelBookingService ..> Auth : /auth
+    HotelBookingService ..> Hotels : /hotels
+    HotelBookingService ..> Bookings : /bookings
+    Hotels ..> HotelById : /{hotelId}
+    HotelById ..> HotelBookings : /bookings
+    Bookings ..> BookingById : /{bookingId}
+    Auth ..> UserRep : uses
+    Hotels ..> HotelRep : uses
+    HotelById ..> HotelRep : uses
+    HotelBookings ..> BookingRep : uses
+    Bookings ..> BookingRep : uses
+    BookingById ..> BookingRep : uses

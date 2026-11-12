@@ -1,0 +1,41 @@
+---
+title: Sequence Diagram — AI support chatbot (real-time, Server-Sent Events)
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant W as ChatWidget (React)
+    participant P as protect + chatLimiter
+    participant C as controllers/chat
+    participant DB as MongoDB
+    participant L as utils/llm
+    participant G as Gemini API
+
+    U->>W: type a question and press Send
+    W->>W: show the message + typing indicator
+    W->>P: POST /api/v1/chat {messages: last 10 user/assistant turns}
+    alt not logged in
+        P-->>W: 401 (widget refreshes the token once and retries)
+    else more than 10 messages in a minute
+        P-->>W: 429 + Retry-After
+    end
+    P->>C: chat(req, res)
+    C->>C: parseMessages(): roles user/assistant only, ≤ 1000 chars, last turn = user
+    alt invalid (e.g. an injected "system" turn)
+        C-->>W: 400 Bad Request
+    end
+    C->>DB: hotels + bookings WHERE user = req.user
+    DB-->>C: public hotel data + only this user's bookings
+    C->>C: buildSystemPrompt(): rules + DATA (treated as data, not instructions)
+    C-->>W: 200 Content-Type: text/event-stream
+    C->>L: streamChat({system, messages, signal})
+    L->>G: streamGenerateContent?alt=sse (API key stays on the server)
+    loop each chunk while the model is generating
+        G-->>L: data: {candidates[0].content.parts[].text}
+        L-->>C: text delta
+        C-->>W: data: {"delta": "..."}
+        W->>W: hide typing indicator, append text
+    end
+    C-->>W: data: {"done": true}
+    Note over C,G: if the user closes the chat or 30 s pass,<br/>the request to Gemini is aborted (no wasted quota)
+    W-->>U: complete answer, no page refresh
