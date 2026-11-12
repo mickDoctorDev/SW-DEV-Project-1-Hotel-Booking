@@ -21,6 +21,6 @@ test('receipt shows total and escapes user-supplied text', () => {
     assert.ok(!html.includes('<script>x</script>'));
 });
 
-test('QR payload identifies the booking and payment only', () => {
-    assert.strictEqual(qrPayload(booking), 'HOTELBOOKING|b1|PAY-ABC');
+test('QR payload is the signed check-in token (booking + payment only, no personal data)', () => {
+    assert.match(qrPayload(booking), /^HB1\.b1\.PAY-ABC\.[A-Za-z0-9_-]{43}$/);
 });

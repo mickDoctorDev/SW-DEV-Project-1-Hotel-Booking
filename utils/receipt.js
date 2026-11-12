@@ -1,13 +1,14 @@
 const QRCode = require('qrcode');
 const { nights } = require('./booking');
 const { sendMail } = require('./mailer');
+const { createCheckinToken } = require('./checkinToken');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const day = (d) => new Date(d).toISOString().slice(0, 10);
 const baht = (n) => `฿${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// What the hotel scans at check-in: enough to look the booking up, nothing personal.
-exports.qrPayload = (booking) => `HOTELBOOKING|${booking._id}|${booking.payment.reference}`;
+// What the hotel scans at check-in: a signed token (utils/checkinToken.js) that cannot be forged; no personal data.
+exports.qrPayload = (booking) => createCheckinToken(booking);
 
 exports.qrPng = (booking) => QRCode.toBuffer(exports.qrPayload(booking), { width: 240, margin: 1 });
 exports.qrDataUrl = (booking) => QRCode.toDataURL(exports.qrPayload(booking), { width: 240, margin: 1 });
@@ -41,6 +42,7 @@ exports.receiptHtml = (booking, user, qrSrc) => {
   <div style="text-align:center">
     <img src="${qrSrc}" width="200" height="200" alt="Check-in QR code">
     <p style="color:#666;font-size:13px">Show this QR code at check-in.</p>
+    <p style="color:#999;font-size:11px;font-family:monospace;word-break:break-all">Check-in code: ${esc(exports.qrPayload(booking))}</p>
   </div>
   <p style="color:#999;font-size:12px;margin-top:24px">This is a mock payment for a student project. No real money was charged.</p>
 </div></body></html>`;

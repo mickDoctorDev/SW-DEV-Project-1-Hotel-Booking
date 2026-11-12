@@ -1,4 +1,4 @@
-import { FaSignInAlt, FaSignOutAlt, FaUser, FaHotel, FaClipboardList } from 'react-icons/fa'
+import { FaSignInAlt, FaSignOutAlt, FaUser, FaHotel, FaClipboardList, FaQrcode } from 'react-icons/fa'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout, reset } from '../features/auth/authSlice'
@@ -28,6 +28,9 @@ function Header() {
                 <FaClipboardList /> {user.role === 'admin' ? 'All bookings' : 'My bookings'}
               </NavLink>
             </li>
+            {user.role === 'admin' && (
+              <li><NavLink to='/checkin'><FaQrcode /> Check-in</NavLink></li>
+            )}
             <li className='who'>
               {user.name}{user.role === 'admin' && <span className='role-badge'>admin</span>}
             </li>

@@ -18,6 +18,7 @@ function Pay() {
   const [card, setCard] = useState('')
   const [paying, setPaying] = useState(false)
   const [email, setEmail] = useState(null) // result of the confirmation email after paying
+  const [checkinCode, setCheckinCode] = useState(null) // signed code inside the QR (also on the receipt)
 
   useEffect(() => {
     api.get(`/bookings/${id}`)
@@ -33,6 +34,7 @@ function Pay() {
       const res = await api.post(`/bookings/${id}/pay`, body)
       setBooking(res.data.data)
       setEmail(res.data.email)
+      setCheckinCode(res.data.checkinToken)
       toast.success('Payment successful')
     } catch (err) {
       toast.error(errorMessage(err))
@@ -64,6 +66,12 @@ function Pay() {
           <p>Reference <strong>{booking.payment?.reference}</strong></p>
         </section>
         {summary}
+        {checkinCode && (
+          <div className="card summary">
+            <p className="small"><strong>Check-in code</strong> (the same code is inside the QR in your email and receipt)</p>
+            <p className="mono small code-box">{checkinCode}</p>
+          </div>
+        )}
         {email && (
           <p className={email.sent ? 'muted' : 'error-text'}>
             {email.sent
