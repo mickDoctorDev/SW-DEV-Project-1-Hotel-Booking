@@ -1,0 +1,41 @@
+---
+title: Sequence Diagram — Check-in with the signed QR code (verification token)
+---
+sequenceDiagram
+    autonumber
+    actor S as Hotel staff (admin)
+    participant W as Check-in page (React)
+    participant P as protect + authorize('admin')
+    participant C as controllers/bookings
+    participant T as utils/checkinToken
+    participant B as Booking model
+    participant A as AuditLog
+
+    Note over S,W: the guest shows the QR from the confirmation email:<br/>HB1.<bookingId>.<paymentRef>.<HMAC-SHA256 signature>
+    S->>W: scan / paste the check-in code
+    W->>P: POST /api/v1/bookings/checkin {token}
+    alt not an admin
+        P-->>W: 403 Forbidden
+    end
+    P->>C: checkIn(req, res)
+    C->>T: verifyCheckinToken(token)
+    T->>T: recompute HMAC with CHECKIN_TOKEN_SECRET, timingSafeEqual
+    alt forged, edited or signed with another key
+        T-->>C: null
+        C-->>W: 400 {valid: false} "Invalid check-in code"
+    end
+    T-->>C: {bookingId, reference}
+    C->>B: findOne({_id: bookingId, deletedAt: null})
+    alt booking cancelled / not found
+        C-->>W: 404 {valid: false}
+    else not paid, or payment reference changed (payment undone)
+        C-->>W: 409 {valid: false} "code no longer valid"
+    end
+    C->>B: findOneAndUpdate({status: paid, payment.reference, checkedInAt: null} → {checkedInAt: now})
+    Note over C,B: atomic: only the first scan succeeds
+    alt already checked in
+        C-->>W: 409 {valid: true, alreadyCheckedIn: true}
+    end
+    C->>A: audit(staff, 'booking.checkin')
+    C-->>W: 200 {valid: true, guest, hotel, dates, amount, checkedInAt}
+    W-->>S: green "guest checked in" card

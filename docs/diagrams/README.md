@@ -11,6 +11,7 @@ Rendered images (`.png` for slides, `.svg` for zooming) sit next to their source
 | Sequence: create booking | `seq-create-booking.mmd` | Step 14 |
 | Sequence: pay + confirmation email | `seq-pay.mmd` | Step 14 / extra credit |
 | Sequence: AI support chatbot (SSE) | `seq-chat.mmd` | Extra credit |
+| Sequence: check-in with the signed QR code | `seq-checkin.mmd` | Extra credit |
 
 ## Editing
 

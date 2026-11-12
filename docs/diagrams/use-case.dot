@@ -35,6 +35,8 @@ digraph UseCase {
         editAny    [label="Edit any booking"];
         delAny     [label="Delete any booking"];
         manage     [label="Manage hotels"];
+        status     [label="Change booking status\n(paid at hotel / undo)"];
+        checkin    [label="Verify check-in QR\n(signed code)"];
     }
 
     guest -> register;
@@ -43,7 +45,7 @@ digraph UseCase {
     user -> create; user -> viewOwn; user -> editOwn; user -> delOwn;
     user -> pay; user -> chat;
     admin -> login; admin -> logout;
-    admin -> viewAny; admin -> editAny; admin -> delAny; admin -> manage;
+    admin -> viewAny; admin -> editAny; admin -> delAny; admin -> manage; admin -> status; admin -> checkin;
 
     create -> rate  [style=dashed, arrowhead=open, label="«include»"];
     editOwn -> rate [style=dashed, arrowhead=open, label="«include»"];
