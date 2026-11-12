@@ -43,21 +43,23 @@ function Register() {
     }));
   }
 
+  // Same rules as the API (middleware/validate.js), checked before sending so the user gets instant feedback.
+  // The API still validates everything: this is only for UX.
+  const validate = () => {
+    if (!name.trim() || name.length > 100) return 'Please enter your name (up to 100 characters)'
+    if (!/^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[A-Za-z]{2,}$/.test(email)) return 'Please enter a valid email'
+    if (!/^[0-9+\-\s]{8,15}$/.test(tel)) return 'Telephone must be 8-15 digits (may contain +, - or spaces)'
+    if (password.length < 8 || password.length > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password))
+      return 'Password must be 8-72 characters and contain a letter and a digit'
+    if (password !== password2) return 'Passwords do not match'
+    return null
+  }
+
   const onSubmit = (e) => {
     e.preventDefault()
-
-    if (password !== password2) {
-      toast.error('Passwords do not match')
-    } else {
-      const userData = {
-        name,
-        email,
-        password,
-        tel
-      }
-
-      dispatch(register(userData))
-    }
+    const problem = validate()
+    if (problem) return toast.error(problem)
+    dispatch(register({ name, email, password, tel }))
   }
 
   return (
@@ -104,8 +106,12 @@ function Register() {
               value={password}
               onChange={onChange}
               placeholder='Enter Your password'
+              minLength={8}
+              maxLength={72}
+              autoComplete='new-password'
               required
             />
+            <p className='hint'>At least 8 characters, with a letter and a digit.</p>
           </div>
           <div className="form-group">
             <input
@@ -133,7 +139,7 @@ function Register() {
             />
           </div>
           <div className='form-group'>
-            <button className='btn btn-block'>Submit</button>
+            <button className='btn btn-block' disabled={isLoading}>{isLoading ? 'Creating account…' : 'Submit'}</button>
           </div>
         </form>
       </section>

@@ -87,7 +87,7 @@ function Login() {
             />
           </div>
           <div className='form-group'>
-            <button className='btn btn-block'>Submit</button>
+            <button className='btn btn-block' disabled={isLoading}>{isLoading ? 'Logging in…' : 'Submit'}</button>
           </div>
         </form>
       </section>
