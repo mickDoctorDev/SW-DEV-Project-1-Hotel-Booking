@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { createCheckinToken, verifyCheckinToken } = require('../utils/checkinToken');
-const { MemoryStore, createWindow } = require('../utils/slidingWindow');
+const { MemoryStore } = require('../utils/slidingWindow');
 
 process.env.CHECKIN_TOKEN_SECRET = 'test-secret-that-is-long-enough-123456';
 const booking = { _id: '6af4389bf3bc4694b27cd845', payment: { reference: 'PAY-F7AC07D225AB' } };
@@ -43,23 +43,4 @@ test('peek does not count; add counts even when over the limit', () => {
     for (let i = 0; i < 3; i++) s.run('k', 3, 1000, 'add', 10 + i);
     assert.strictEqual(s.run('k', 3, 1000, 'peek', 20).allowed, false);
     assert.strictEqual(s.run('k', 3, 1000, 'peek', 1011).allowed, true);
-});
-
-test('Redis store gives the same answers (skipped without REDIS_URL)', { skip: !process.env.REDIS_URL }, async () => {
-    const { createClient } = require('redis');
-    const client = createClient({ url: process.env.REDIS_URL });
-    await client.connect();
-    try {
-        const key = `test-${Date.now()}`;
-        const win = createWindow({ limit: 3, windowMs: 2000, getRedis: () => client });
-        const results = [];
-        for (let i = 0; i < 4; i++) results.push((await win.hit(key)).allowed);
-        assert.deepStrictEqual(results, [true, true, true, false]);
-        assert.ok((await client.zCard(`rl:${key}`)) === 3, 'counter stored in Redis');
-        await new Promise((r) => setTimeout(r, 2100));
-        assert.strictEqual((await win.hit(key)).allowed, true);
-        await client.del(`rl:${key}`);
-    } finally {
-        await client.quit();
-    }
 });

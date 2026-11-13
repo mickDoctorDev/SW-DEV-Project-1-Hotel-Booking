@@ -15,7 +15,6 @@ dotenv.config({ path: "./config/config.env" });
 require('./config/checkEnv')();
 
 connectDB();
-require('./config/redis').connectRedis();
 
 const hotels = require("./routes/hotels");
 const auth = require("./routes/auth");
