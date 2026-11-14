@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://hotel-booking-api.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://hotel-booking-api-b6sp.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
