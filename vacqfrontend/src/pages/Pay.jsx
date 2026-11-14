@@ -7,15 +7,14 @@ import Spinner from '../components/Spinner'
 import { baht, nightsBetween, showDate } from '../utils/format'
 import { openReceipt } from '../utils/receipt'
 
-// groups the digits as "4111 1111 1111 1111" while typing
-const formatCard = (v) => v.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ')
+// Demo checkout: nothing is typed or charged. The card path sends this fixed test number (any 16 digits succeed).
+const DEMO_CARD = '4111111111111111'
 
 function Pay() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [booking, setBooking] = useState(null)
   const [method, setMethod] = useState('card')
-  const [card, setCard] = useState('')
   const [paying, setPaying] = useState(false)
   const [email, setEmail] = useState(null) // result of the confirmation email after paying
   const [checkinCode, setCheckinCode] = useState(null) // signed code inside the QR (also on the receipt)
@@ -30,7 +29,7 @@ function Pay() {
     e.preventDefault()
     setPaying(true)
     try {
-      const body = method === 'card' ? { method, cardNumber: card } : { method }
+      const body = method === 'card' ? { method, cardNumber: DEMO_CARD } : { method }
       const res = await api.post(`/bookings/${id}/pay`, body)
       setBooking(res.data.data)
       setEmail(res.data.email)
@@ -98,7 +97,7 @@ function Pay() {
     <>
       <section className='heading'>
         <h1>Payment</h1>
-        <p>Mock payment for this project. No real money is charged.</p>
+        <p>Demo payment: choose a method and confirm. No details are needed and no real money is charged.</p>
       </section>
       {summary}
 
@@ -115,25 +114,11 @@ function Pay() {
             </button>
           </div>
 
-          {method === 'card' ? (
-            <div className='form-group'>
-              <label htmlFor='card'>Card number</label>
-              <input
-                id='card'
-                className='form-control'
-                inputMode='numeric'
-                autoComplete='off'
-                placeholder='4111 1111 1111 1111'
-                value={card}
-                onChange={(e) => setCard(formatCard(e.target.value))}
-                pattern='(\d{4} ){3}\d{4}'
-                required
-              />
-              <p className='hint'>Test cards: any 16 digits succeeds, a card ending in 0000 is declined.</p>
-            </div>
-          ) : (
-            <p className='hint'>PromptPay is simulated and succeeds immediately.</p>
-          )}
+          <p className='hint'>
+            {method === 'card'
+              ? 'Demo checkout: no card details needed and nothing is charged.'
+              : 'Demo checkout: PromptPay is simulated, no QR to scan and nothing is charged.'}
+          </p>
 
           <button className='btn btn-block' disabled={paying}>
             {paying ? 'Processing…' : `Pay ${baht(amount)}`}
