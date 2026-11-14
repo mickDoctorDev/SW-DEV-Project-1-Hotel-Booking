@@ -197,9 +197,9 @@ exports.forgotPassword = async (req, res) => {
         const resetToken = user.getResetPasswordToken();
         await user.save({ validateBeforeSave: false });
 
-        // The API endpoint that accepts the new password (there is no reset page in the frontend)
-        const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/resetpassword/${resetToken}`;
-        const message = `You are receiving this email because you (or someone else) requested a password reset.\n\nPlease reset your password by submitting a PUT request with your new password ({ "password": "..." }) to:\n\n${resetUrl}\n\nThis link is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
+        // The frontend page that asks for the new password and then calls PUT /auth/resetpassword/:token
+        const resetUrl = `${process.env.CLIENT_ORIGIN || 'http://localhost:5173'}/reset-password/${resetToken}`;
+        const message = `You are receiving this email because you (or someone else) requested a password reset.\n\nChoose a new password here:\n\n${resetUrl}\n\nThis link is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
 
         // Answer first and send the email in the background: waiting for SMTP would make real addresses
         // noticeably slower than unknown ones, which leaks the same information as a 404 would.

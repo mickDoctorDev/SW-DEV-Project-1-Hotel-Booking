@@ -171,6 +171,9 @@ input, select, textarea { font-family: var(--sans); color: var(--ink); }
   width: 100%; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-size: 15px; transition: border-color .2s, background .2s; }
 .form-group input:focus, .form-group select:focus, .stay-picker select:focus, textarea.mono:focus { outline: none; border-color: var(--warm); background: #fff; }
 .hint { font-size: 12px; color: var(--muted); margin: -4px 0 12px 2px; }
+.form-links { text-align: right; margin-top: 4px; font-size: 13px; }
+.form-links a { color: var(--warm); text-decoration: underline; text-underline-offset: 3px; }
+.form-links a:hover { color: var(--ink); }
 textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; resize: vertical; }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }

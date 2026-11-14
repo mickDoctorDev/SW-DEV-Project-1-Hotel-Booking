@@ -14,6 +14,8 @@ import Pay from './pages/Pay'
 import CheckIn from './pages/CheckIn'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 // Inner pages share a padded container below the floating header; the home page runs full width.
 function Shell() {
@@ -38,6 +40,8 @@ function App() {
             <Route path='/hotels' element={<Hotels />} />
             <Route path='/login' element={<Login />} />
             <Route path='/register' element={<Register />} />
+            <Route path='/forgot-password' element={<ForgotPassword />} />
+            <Route path='/reset-password/:token' element={<ResetPassword />} />
             <Route path='/hotels/:hotelId/book' element={<PrivateRoute><BookHotel /></PrivateRoute>} />
             <Route path='/bookings' element={<PrivateRoute><Bookings /></PrivateRoute>} />
             <Route path='/bookings/:id/pay' element={<PrivateRoute><Pay /></PrivateRoute>} />
