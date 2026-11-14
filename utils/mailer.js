@@ -13,7 +13,8 @@ const getTransporter = () => {
                     host: process.env.SMTP_HOST,
                     port,
                     secure: port === 465,
-                    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+                    // SMTP_EMAIL / SMTP_PASSWORD are accepted too: some existing config.env files use those names
+                    auth: { user: process.env.SMTP_USER || process.env.SMTP_EMAIL, pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD },
                 });
             }
             const account = await nodemailer.createTestAccount();

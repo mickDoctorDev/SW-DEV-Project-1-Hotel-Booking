@@ -17,7 +17,7 @@ sequenceDiagram
     alt no / invalid token
         P-->>U: 401 Not authorized
     end
-    P->>L: sliding window in Redis: attempts by this user in the last 60 s
+    P->>L: sliding window in memory: attempts by this user in the last 60 s
     alt 6th attempt within a minute
         L-->>U: 429 + Retry-After
     end

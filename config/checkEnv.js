@@ -9,7 +9,6 @@ module.exports = () => {
         if ((env.JWT_SECRET || '').length < 32) problems.push('JWT_SECRET must be at least 32 characters in production');
         if (!env.CLIENT_ORIGIN) problems.push('CLIENT_ORIGIN must be set in production (the deployed frontend URL)');
         if (!env.SMTP_HOST) problems.push('SMTP_HOST must be set in production (Ethereal test mail does not deliver)');
-        if (!env.REDIS_URL) problems.push('REDIS_URL must be set in production (rate limits must be shared by every server)');
         if ((env.CHECKIN_TOKEN_SECRET || '').length < 32) problems.push('CHECKIN_TOKEN_SECRET must be at least 32 characters in production');
     }
     if (problems.length) {

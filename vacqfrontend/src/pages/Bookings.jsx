@@ -108,7 +108,7 @@ function Bookings() {
 
       {shown.length === 0 && (
         <p className='muted'>
-          No bookings{bookings.length ? ' match the filter' : ' yet'}. <Link to='/'>Find a hotel</Link>
+          No bookings{bookings.length ? ' match the filter' : ' yet'}. <Link to='/hotels'>Find a hotel</Link>
         </p>
       )}
 

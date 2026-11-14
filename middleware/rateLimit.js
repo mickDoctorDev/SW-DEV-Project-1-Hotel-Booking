@@ -1,5 +1,4 @@
-// Rate limiting with an exact sliding window (utils/slidingWindow.js). Counters live in Redis when REDIS_URL is
-// set (shared by every API server, kept across restarts) and fall back to memory otherwise.
+// Rate limiting with an exact sliding window (utils/slidingWindow.js). Counters live in this server's memory.
 //
 // Two kinds of limiters:
 //  - count every request (booking attempts, chat messages, global traffic)
@@ -10,7 +9,6 @@
 
 const crypto = require('crypto');
 const { createWindow } = require('../utils/slidingWindow');
-const { redis } = require('../config/redis');
 
 const MIN = 60 * 1000;
 // emails are hashed so the rate-limit store never holds personal data
@@ -20,7 +18,7 @@ const emailKey = (req) => {
 };
 
 const limiter = ({ name, limit, windowMs, key, countWhen, message }) => {
-    const win = createWindow({ limit, windowMs, getRedis: redis });
+    const win = createWindow({ limit, windowMs });
     return async (req, res, next) => {
         const k = `${name}:${key(req)}`;
         let result;

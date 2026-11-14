@@ -1,12 +1,14 @@
-import { FaSignInAlt, FaSignOutAlt, FaUser, FaHotel, FaClipboardList, FaQrcode } from 'react-icons/fa'
+import { useState } from 'react'
+import { FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout, reset } from '../features/auth/authSlice'
 
 function Header() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
+  const [open, setOpen] = useState(false)
 
   const onLogout = async () => {
     await dispatch(logout())
@@ -15,48 +17,34 @@ function Header() {
   }
 
   return (
-    <header className='header'>
-      <div className='logo'>
-        <Link to='/'><FaHotel /> Hotel Booking</Link>
-      </div>
-      <ul>
-        <li><NavLink to='/' end>Hotels</NavLink></li>
+    <header className={`header ${open ? 'open' : ''}`} onClick={(e) => e.target.closest('a, .btn') && setOpen(false)}>
+      <Link to='/' className='wordmark'>HOTEL BOOKING</Link>
+      <button className='nav-toggle' onClick={() => setOpen(!open)} aria-expanded={open} aria-label='Menu'>
+        {open ? <FaTimes /> : <FaBars />}
+      </button>
+      <nav className='nav' aria-label='Main'>
+        <NavLink to='/' end>Home</NavLink>
+        <NavLink to='/hotels'>Hotels</NavLink>
+        {user && <NavLink to='/bookings'>{user.role === 'admin' ? 'All bookings' : 'My bookings'}</NavLink>}
+        {user?.role === 'admin' && <NavLink to='/checkin'>Check-in</NavLink>}
+      </nav>
+      <div className='nav-actions'>
         {user ? (
           <>
-            <li>
-              <NavLink to='/bookings'>
-                <FaClipboardList /> {user.role === 'admin' ? 'All bookings' : 'My bookings'}
-              </NavLink>
-            </li>
-            {user.role === 'admin' && (
-              <li><NavLink to='/checkin'><FaQrcode /> Check-in</NavLink></li>
-            )}
-            <li className='who'>
+            <span className='who'>
               {user.name}{user.role === 'admin' && <span className='role-badge'>admin</span>}
-            </li>
-            <li>
-              <button className='btn btn-sm' onClick={onLogout}>
-                <FaSignOutAlt /> Logout
-              </button>
-            </li>
+            </span>
+            <button className='btn btn-sm btn-gold' onClick={onLogout}><FaSignOutAlt /> Log out</button>
           </>
         ) : (
           <>
-            <li>
-              <NavLink to='/login'>
-                <FaSignInAlt /> Login
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to='/register'>
-                <FaUser /> Register
-              </NavLink>
-            </li>
+            <NavLink to='/login' className='nav-link'>Log in</NavLink>
+            <Link to='/register' className='btn btn-sm btn-gold'>Create account</Link>
           </>
         )}
-      </ul>
+      </div>
     </header>
   )
 }
 
-export default Header;
+export default Header

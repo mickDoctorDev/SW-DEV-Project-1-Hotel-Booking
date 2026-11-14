@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { FaHotel, FaMapMarkerAlt, FaPhone, FaSearch } from 'react-icons/fa'
+import { FaMapMarkerAlt, FaPhone, FaSearch } from 'react-icons/fa'
 import api, { errorMessage } from '../app/api'
 import Spinner from '../components/Spinner'
 import { baht } from '../utils/format'
+import { hotelImage } from '../utils/images'
 
 function Hotels() {
   const { user } = useSelector((state) => state.auth)
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [query, setQuery] = useState('')
+  const [params] = useSearchParams()
+  const [query, setQuery] = useState(params.get('q') || '')
 
   useEffect(() => {
     api.get('/hotels', { params: { limit: 100, sort: 'name' } })
@@ -31,7 +33,8 @@ function Hotels() {
   return (
     <>
       <section className='heading'>
-        <h1><FaHotel /> Find a hotel</h1>
+        <span className='eyebrow'>Hotels</span>
+        <h1>Find your hotel</h1>
         <p>Book up to 3 nights{user ? `, ${user.name}` : ''}.</p>
       </section>
 
@@ -52,10 +55,13 @@ function Hotels() {
       <div className='hotel-grid'>
         {shown.map((h) => (
           <article key={h._id} className='card hotel-card'>
-            <h3>{h.name}</h3>
-            <p><FaMapMarkerAlt /> {h.address}</p>
-            <p><FaPhone /> {h.tel}</p>
-            <p className='price'>{baht(h.pricePerNight)} <span className='muted'>/ night</span></p>
+            <img src={hotelImage(h, 700)} alt='' loading='lazy' />
+            <div className='hotel-body'>
+              <h3>{h.name}</h3>
+              <p><FaMapMarkerAlt /> {h.address}</p>
+              <p><FaPhone /> {h.tel}</p>
+              <p className='price'>{baht(h.pricePerNight)} <span className='muted'>/ night</span></p>
+            </div>
             <Link className='btn btn-block' to={user ? `/hotels/${h._id}/book` : '/login'}>
               {user ? 'Book now' : 'Log in to book'}
             </Link>

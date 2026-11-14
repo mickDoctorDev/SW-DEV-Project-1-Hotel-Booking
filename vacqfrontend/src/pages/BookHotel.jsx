@@ -17,7 +17,7 @@ function BookHotel() {
   useEffect(() => {
     api.get(`/hotels/${hotelId}`)
       .then((res) => setHotel(res.data.data))
-      .catch((e) => { toast.error(errorMessage(e)); navigate('/') })
+      .catch((e) => { toast.error(errorMessage(e)); navigate('/hotels') })
   }, [hotelId, navigate])
 
   const onSubmit = async (e) => {
@@ -41,7 +41,7 @@ function BookHotel() {
 
   return (
     <>
-      <Link to='/' className='btn btn-reverse btn-back'><FaArrowLeft /> Back</Link>
+      <Link to='/hotels' className='btn btn-reverse btn-back'><FaArrowLeft /> Back</Link>
       <section className='heading'>
         <h1>{hotel.name}</h1>
         <p><FaMapMarkerAlt /> {hotel.address} · <FaPhone /> {hotel.tel}</p>

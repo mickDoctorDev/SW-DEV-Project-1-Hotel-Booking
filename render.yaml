@@ -1,0 +1,27 @@
+# Render Blueprint: the API. Secrets (sync: false) are typed in the Render dashboard, never committed.
+services:
+  - type: web
+    name: hotel-booking-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - { key: NODE_VERSION, value: "20" }
+      - { key: NODE_ENV, value: production }
+      - { key: JWT_EXPIRE, value: 15m }
+      - { key: JWT_REFRESH_DAYS, value: "7" }
+      - { key: TRUST_PROXY, value: "1" } # verify after deploy, see README "Deploying"
+      - { key: MONGO_URI, sync: false }
+      - { key: JWT_SECRET, sync: false }          # 32+ random chars
+      - { key: CHECKIN_TOKEN_SECRET, sync: false } # 32+ random chars, different from JWT_SECRET
+      - { key: CLIENT_ORIGIN, sync: false }        # the Vercel URL, e.g. https://your-app.vercel.app
+      - { key: SMTP_HOST, sync: false }
+      - { key: SMTP_PORT, value: "465" }
+      - { key: SMTP_USER, sync: false }
+      - { key: SMTP_PASS, sync: false }
+      - { key: EMAIL_FROM, sync: false }
+      - { key: CHAT_PROVIDER, value: gemini }
+      - { key: CHAT_API_KEY, sync: false }
+      - { key: CHAT_MODEL, value: gemini-3.5-flash-lite }

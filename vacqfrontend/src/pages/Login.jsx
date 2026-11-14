@@ -3,7 +3,7 @@ import { toast } from 'react-toastify'
 import { FaSignInAlt } from 'react-icons/fa'
 import { useSelector, useDispatch } from 'react-redux'
 import { login, reset } from '../features/auth/authSlice'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -88,6 +88,9 @@ function Login() {
           </div>
           <div className='form-group'>
             <button className='btn btn-block' disabled={isLoading}>{isLoading ? 'Logging in…' : 'Submit'}</button>
+          </div>
+          <div className='form-links'>
+            <Link to='/forgot-password'>Forgot password?</Link>
           </div>
         </form>
       </section>
