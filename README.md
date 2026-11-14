@@ -111,6 +111,14 @@ To change the tests, edit `postman/generate.js` and run `npm run postman:generat
 - Forgot password returns the same answer for every email and delivers the token only by email.
 - In production (`NODE_ENV=production`) the server refuses to start without a strong `JWT_SECRET` and `CHECKIN_TOKEN_SECRET`, `CLIENT_ORIGIN` and SMTP settings, and the seed script creates no test accounts.
 
+## Deploying (Render API + Vercel frontend)
+
+1. **API on Render:** New → Blueprint → pick this repo (`render.yaml`). Fill the secrets it asks for. Atlas → Network Access must allow Render's IPs (or `0.0.0.0/0`).
+2. **Frontend on Vercel:** import the repo, set *Root Directory* to `vacqfrontend`. Add the environment variable `VITE_API_URL=/api/v1` (`.env*` files are git-ignored). `vercel.json` proxies `/api/*` to the Render service, so the browser only talks to the Vercel domain and the `SameSite=Strict` cookies work.
+3. If Render gives the service another name than `hotel-booking-api`, edit the destination in `vacqfrontend/vercel.json`. Set `CLIENT_ORIGIN` on Render to the Vercel URL.
+4. Check `TRUST_PROXY`: log in wrongly 11 times from your phone, then from a laptop. If the laptop is also locked out, every user shares one IP: raise `TRUST_PROXY` to 2.
+5. The Render free plan sleeps after ~15 min idle (first request ~50 s). Use a paid plan or a ping before a demo.
+
 ## Project documents
 
 Use case, class and sequence diagrams are in [`docs/diagrams/`](docs/diagrams/), as PNGs for slides with editable sources.
