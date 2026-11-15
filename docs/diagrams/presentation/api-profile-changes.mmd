@@ -1,0 +1,107 @@
+---
+title: UML Profile for API — changes from the VacQ starter (core requirements)
+---
+classDiagram
+    direction LR
+
+    class HotelBookingAPI {
+        <<Application>>
+        /api/v1
+    }
+
+    class Auth {
+        <<Resource>>
+        /auth
+        +POST register() User  «changed: tel»
+        +POST login() token
+        +POST logout() void  «changed: was GET»
+        +POST refresh() token  «new»
+        +GET me() User
+        +DELETE deleteMe() void  «new»
+        +POST forgotPassword() void  «new»
+        +PUT resetPassword() token  «new»
+        +POST createUser() User  [admin] «new»
+    }
+
+    class Hotels {
+        <<Resource>>
+        /hotels  «was /hospitals»
+        +GET getHotels() Hotel[]
+        +POST createHotel() Hotel  [admin]
+    }
+
+    class Hotel {
+        <<Resource>>
+        /hotels/hotelId
+        +GET getHotel() Hotel
+        +PUT updateHotel() Hotel  [admin]
+        +DELETE deleteHotel() void  [admin]
+    }
+
+    class HotelBookings {
+        <<Resource>>
+        /hotels/hotelId/bookings  «was /appointments»
+        +POST addBooking() Booking  «changed: 1–3 nights, rooms»
+    }
+
+    class Bookings {
+        <<Resource>>
+        /bookings  «was /appointments»
+        +GET getBookings() Booking[]  [own / admin: all]
+    }
+
+    class Booking {
+        <<Resource>>
+        /bookings/bookingId
+        +GET getBooking() Booking  «changed: 404 if not yours»
+        +PUT updateBooking() Booking  «changed: stay rules»
+        +DELETE deleteBooking() void  «changed: soft delete»
+    }
+
+    class UserRep {
+        <<Representation>>
+        -name
+        -tel  «new, required»
+        -email
+        -password  «min 8 chars»
+        -role
+    }
+
+    class HotelRep {
+        <<Representation>>
+        -name
+        -address
+        -tel
+        -totalRooms  «new»
+        -district, province, postalcode, region  «removed»
+    }
+
+    class BookingRep {
+        <<Representation>>
+        -checkIn  «new, replaces apptDate»
+        -checkOut  «new»
+        -user
+        -hotel
+        -deletedAt  «new»
+    }
+
+    HotelBookingAPI ..> Auth
+    HotelBookingAPI ..> Hotels
+    HotelBookingAPI ..> Bookings
+    Hotels ..> Hotel
+    Hotel ..> HotelBookings
+    Bookings ..> Booking
+    Auth ..> UserRep
+    Hotel ..> HotelRep
+    HotelBookings ..> BookingRep
+    Booking ..> BookingRep
+
+    style Auth fill:#fff4e5,stroke:#d98b1c
+    style Hotels fill:#fff4e5,stroke:#d98b1c
+    style Hotel fill:#fff4e5,stroke:#d98b1c
+    style HotelBookings fill:#fff4e5,stroke:#d98b1c
+    style Bookings fill:#fff4e5,stroke:#d98b1c
+    style Booking fill:#fff4e5,stroke:#d98b1c
+    style UserRep fill:#fff4e5,stroke:#d98b1c
+    style HotelRep fill:#fff4e5,stroke:#d98b1c
+    style BookingRep fill:#fff4e5,stroke:#d98b1c
