@@ -1,0 +1,41 @@
+// Use Case Diagram — core requirements 1–9 only (extra credits are not drawn)
+// render: dot -Tpng -Gdpi=200 use-case-core.dot -o use-case-core.png
+digraph UseCaseCore {
+    rankdir=LR;
+    graph [fontname="Helvetica", fontsize=14, nodesep=0.22, ranksep=1.3, pad=0.3, bgcolor="white"];
+    node  [fontname="Helvetica", fontsize=13];
+    edge  [fontname="Helvetica", fontsize=11, arrowhead=none, color="#555555"];
+
+    guest [label="Guest\n(not logged in)", shape=none];
+    user  [label="User", shape=none];
+    admin [label="Admin", shape=none];
+
+    subgraph cluster_system {
+        label="Hotel Booking System"; labeljust=l; fontsize=15; fontname="Helvetica-Bold";
+        style="rounded"; color="#333333"; margin=16;
+        node [shape=ellipse, style=filled, fillcolor="#eef4ff", color="#3b6fd8"];
+
+        register   [label="Register\n(name, tel, email, password)"];
+        login      [label="Log in\n(email, password)"];
+        logout     [label="Log out"];
+        viewHotels [label="View hotel list\n(name, address, tel)"];
+        create     [label="Book hotel\n(up to 3 nights)"];
+        viewOwn    [label="View own bookings"];
+        editOwn    [label="Edit own booking"];
+        delOwn     [label="Delete own booking"];
+        viewAny    [label="View any booking"];
+        editAny    [label="Edit any booking"];
+        delAny     [label="Delete any booking"];
+        stay       [label="Check stay rules\n(1–3 nights, rooms left)", fillcolor="#fff4e5", color="#d98b1c"];
+    }
+
+    guest -> register; guest -> viewHotels;
+    user -> login; user -> logout; user -> viewHotels;
+    user -> create; user -> viewOwn; user -> editOwn; user -> delOwn;
+    admin -> login; admin -> logout;
+    admin -> viewAny; admin -> editAny; admin -> delAny;
+
+    create -> stay  [style=dashed, arrowhead=open, label="«include»"];
+    editOwn -> stay [style=dashed, arrowhead=open, label="«include»"];
+    editAny -> stay [style=dashed, arrowhead=open, label="«include»"];
+}

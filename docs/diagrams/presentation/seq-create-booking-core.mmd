@@ -1,0 +1,31 @@
+---
+title: Book a hotel, up to 3 nights (requirement 3)
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant P as protect + authorize
+    participant C as controllers/bookings
+    participant H as Hotel model
+    participant B as Booking model
+
+    U->>P: POST /hotels/:hotelId/bookings {checkIn, checkOut}
+    alt not logged in
+        P-->>U: 401 Not authorized
+    end
+    P->>C: addBooking()
+    C->>C: parseStay(): 1–3 nights, check-in not in the past
+    alt 0 or more than 3 nights
+        C-->>U: 400 A booking must be between 1 and 3 nights
+    end
+    Note over C,B: MongoDB transaction
+    C->>H: lock hotel document
+    alt hotel not found
+        C-->>U: 404 No hotel with this id
+    end
+    C->>B: count overlapping bookings
+    alt no rooms left
+        C-->>U: 409 No rooms available
+    end
+    C->>B: create({checkIn, checkOut, user, hotel})
+    C-->>U: 201 Created {booking}

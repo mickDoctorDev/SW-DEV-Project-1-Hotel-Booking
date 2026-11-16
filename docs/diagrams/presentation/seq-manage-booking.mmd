@@ -1,0 +1,28 @@
+---
+title: View, edit, delete bookings — own vs any (requirements 4–9)
+---
+sequenceDiagram
+    autonumber
+    actor A as User or Admin
+    participant P as protect + authorize
+    participant C as controllers/bookings
+    participant B as Booking model
+
+    A->>P: GET / PUT / DELETE /bookings/:id
+    alt not logged in
+        P-->>A: 401 Not authorized
+    end
+    P->>C: getBooking / updateBooking / deleteBooking
+    C->>C: scope(req)
+    Note over C: user: {_id, user: me, deletedAt: null}<br/>admin: {_id, deletedAt: null}
+    C->>B: findOne(scope)
+    alt someone else's booking (user) or not found
+        C-->>A: 404 No booking with this id
+    end
+    opt PUT: new dates
+        C->>C: parseStay() + room check, as when booking
+    end
+    opt DELETE
+        C->>B: set deletedAt (soft delete)
+    end
+    C-->>A: 200 {booking}

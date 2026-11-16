@@ -1,0 +1,34 @@
+---
+title: Register, log in, log out (requirements 1–2)
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant V as validateRegister / validateLogin
+    participant C as controllers/auth
+    participant UM as User model
+    participant DB as MongoDB
+
+    U->>V: POST /auth/register {name, tel, email, password}
+    alt missing field, bad email / tel, password under 8 chars
+        V-->>U: 400 Bad Request
+    end
+    V->>C: register()
+    C->>UM: create({name, tel, email, password, role: user})
+    UM->>DB: insert (password hashed with bcrypt)
+    alt email already used
+        C-->>U: 400 Duplicate email
+    end
+    C-->>U: 201 + HttpOnly cookies (access + refresh token)
+
+    U->>V: POST /auth/login {email, password}
+    V->>C: login()
+    C->>UM: findOne({email}) + bcrypt.compare
+    alt wrong email or password
+        C-->>U: 401 Invalid credentials
+    end
+    C-->>U: 200 {role} + HttpOnly cookies
+
+    U->>C: POST /auth/logout
+    C->>DB: revoke refresh token
+    C-->>U: 200 + clear cookies
