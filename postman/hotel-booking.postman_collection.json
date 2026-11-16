@@ -1190,7 +1190,7 @@
           ]
         },
         {
-          "name": "Pay with a declined card -> 402",
+          "name": "Pay with card (demo, no details)",
           "request": {
             "method": "POST",
             "header": [
@@ -1216,49 +1216,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"method\": \"card\",\n  \"cardNumber\": \"4111 1111 1111 0000\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Declined card is rejected (402)', () => pm.response.to.have.status(402));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pay with a valid card",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/bookings/{{payBookingId}}/pay",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "bookings",
-                "{{payBookingId}}",
-                "pay"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"method\": \"card\",\n  \"cardNumber\": \"4111 1111 1111 1111\"\n}"
+              "raw": "{\n  \"method\": \"card\"\n}"
             }
           },
           "event": [
@@ -1474,6 +1432,15 @@
             }
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.cookies.jar().clear(pm.request.url, () => {});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
