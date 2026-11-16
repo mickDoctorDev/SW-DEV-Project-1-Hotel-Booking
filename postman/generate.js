@@ -450,6 +450,8 @@ const sse = `
 const chat = folder('Extra - AI chatbot', [
     req('Chat without login -> 401', 'POST', '/chat', {
         auth: false, body: { messages: [{ role: 'user', content: 'hello' }] },
+        // the server prefers the login cookie over the header, so drop the cookies left by earlier requests
+        pre: `pm.cookies.jar().clear(pm.request.url, () => {});`,
         test: status(401, 'Registered users only (401)'),
     }),
     req('Login user', 'POST', '/auth/login', {
