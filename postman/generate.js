@@ -257,12 +257,8 @@ const pay = folder('Extra - Payment, QR code and email receipt', [
     pm.test('New booking is pending payment', () => pm.expect(b.status).to.eql('pending'));
     pm.collectionVariables.set('payBookingId', b._id);`,
     }),
-    req('Pay with a declined card -> 402', 'POST', '/bookings/{{payBookingId}}/pay', {
-        body: { method: 'card', cardNumber: '4111 1111 1111 0000' },
-        test: status(402, 'Declined card is rejected (402)'),
-    }),
-    req('Pay with a valid card', 'POST', '/bookings/{{payBookingId}}/pay', {
-        body: { method: 'card', cardNumber: '4111 1111 1111 1111' },
+    req('Pay with card (demo, no details)', 'POST', '/bookings/{{payBookingId}}/pay', {
+        body: { method: 'card' },
         test: `${status(200, 'Payment accepted (200)')}
     const r = pm.response.json();
     pm.test('Booking is now paid', () => pm.expect(r.data.status).to.eql('paid'));

@@ -129,13 +129,7 @@ exports.deleteBooking = async (req, res) => {
 const parsePayment = (body) => {
     const method = body && body.method;
     if (method !== 'card' && method !== 'promptpay') throw new HttpError(400, "method must be 'card' or 'promptpay'");
-    if (method === 'card') {
-        const card = typeof body.cardNumber === 'string' ? body.cardNumber.replace(/[\s-]/g, '') : '';
-        if (!/^\d{16}$/.test(card)) throw new HttpError(400, 'cardNumber must be 16 digits');
-        // mock gateway: any card ending in 0000 is declined, so the failure path can be demoed
-        if (card.endsWith('0000')) throw new HttpError(402, 'Payment declined by the bank (mock)');
-    }
-    return method; // the card number is only checked, never stored
+    return method; // demo gateway: every method succeeds, no card details are read or stored
 };
 
 //@route POST /api/v1/bookings/:id/pay   (mock payment; owner only, admins cannot pay for others)
