@@ -1,0 +1,36 @@
+---
+title: Steps 6 and 11 — Edit own booking (user) / any booking (admin)
+---
+sequenceDiagram
+    autonumber
+    actor A as User or Admin
+    participant P as protect
+    participant C as controllers/bookings
+    participant H as Hotel model
+    participant B as Booking model
+
+    A->>P: PUT /bookings/:id {checkIn, checkOut}
+    alt not logged in
+        P-->>A: 401 Not authorized
+    end
+    P->>C: updateBooking()
+    C->>C: parseStay(): only dates, 1–3 nights, not in the past
+    alt invalid stay
+        C-->>A: 400 Bad Request
+    end
+    C->>B: findOne(scope(req))
+    Note over C: user: {_id, user: me}<br/>admin: {_id}
+    alt another user's booking (user) or not found
+        C-->>A: 404 No booking with this id
+    end
+    alt user edits a paid booking
+        C-->>A: 409 A paid booking cannot be changed
+    end
+    Note over C,B: MongoDB transaction
+    C->>H: lock hotel document
+    C->>B: count other overlapping bookings
+    alt no rooms left for the new dates
+        C-->>A: 409 No rooms available
+    end
+    C->>B: save new checkIn, checkOut
+    C-->>A: 200 {data: booking}

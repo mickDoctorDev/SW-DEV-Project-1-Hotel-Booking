@@ -1,0 +1,16 @@
+---
+title: Step 8 — User log out
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant C as controllers/auth
+    participant RT as RefreshToken model
+    participant P as protect
+
+    U->>C: POST /auth/logout (cookies)
+    C->>RT: revoke this refresh token (revokedAt = now)
+    C-->>U: 200 + clear token and refreshToken cookies
+
+    U->>P: GET /auth/me (no token)
+    P-->>U: 401 Not authorized
