@@ -1,0 +1,23 @@
+---
+title: Step 3 — User views products (hotels)
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant R as routes/hotels
+    participant C as controllers/hotels
+    participant H as Hotel model
+
+    U->>R: GET /hotels?sort=&page=&limit=
+    R->>C: getHotels()
+    C->>H: find().sort().skip().limit()
+    H-->>C: hotels
+    C-->>U: 200 {count, total, pagination, data: name, address, tel, ...}
+
+    U->>R: GET /hotels/:id
+    R->>C: getHotel()
+    C->>H: findById(id)
+    alt no hotel with this id
+        C-->>U: 404 Hotel not found
+    end
+    C-->>U: 200 {data: hotel}

@@ -1,0 +1,23 @@
+---
+title: Steps 2 and 9 — User / Admin log in
+---
+sequenceDiagram
+    autonumber
+    actor U as User or Admin
+    participant V as validateLogin
+    participant C as controllers/auth
+    participant UM as User model
+    participant RT as RefreshToken model
+
+    U->>V: POST /auth/login {email, password}
+    alt email or password missing
+        V-->>U: 400 Bad Request
+    end
+    V->>C: login()
+    C->>UM: findOne({email}).select(+password)
+    C->>C: bcrypt.compare(password)
+    alt wrong email or password
+        C-->>U: 401 Invalid credentials
+    end
+    C->>RT: save hashed refresh token
+    C-->>U: 200 {token, role: user or admin} + HttpOnly cookies

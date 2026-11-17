@@ -1,0 +1,93 @@
+---
+title: Class Diagram — UML Profile for API (core requirements)
+---
+classDiagram
+    direction LR
+
+    class HotelBookingAPI {
+        <<Application>>
+        /api/v1
+    }
+
+    class Auth {
+        <<Resource>>
+        /auth
+        +POST register() User  [step 1]
+        +POST login() token  [steps 2, 9]
+        +POST logout() void  [step 8]
+        +POST refresh() token
+        +GET me() User
+    }
+
+    class Hotels {
+        <<Resource>>
+        /hotels
+        +GET getHotels() Hotel[]  [step 3]
+        +POST createHotel() Hotel  [admin]
+    }
+
+    class Hotel {
+        <<Resource>>
+        /hotels/hotelId
+        +GET getHotel() Hotel  [step 3]
+        +PUT updateHotel() Hotel  [admin]
+        +DELETE deleteHotel() void  [admin]
+    }
+
+    class HotelBookings {
+        <<Resource>>
+        /hotels/hotelId/bookings
+        +POST addBooking() Booking  [step 4]
+    }
+
+    class Bookings {
+        <<Resource>>
+        /bookings
+        +GET getBookings() Booking[]  [steps 5, 10]
+    }
+
+    class Booking {
+        <<Resource>>
+        /bookings/bookingId
+        +GET getBooking() Booking  [steps 5, 10]
+        +PUT updateBooking() Booking  [steps 6, 11]
+        +DELETE deleteBooking() void  [steps 7, 12]
+    }
+
+    class UserRep {
+        <<Representation>>
+        -name
+        -tel
+        -email
+        -password
+        -role
+    }
+
+    class HotelRep {
+        <<Representation>>
+        -name
+        -address
+        -tel
+        -totalRooms
+        -pricePerNight
+    }
+
+    class BookingRep {
+        <<Representation>>
+        -checkIn
+        -checkOut
+        -user
+        -hotel
+        -deletedAt
+    }
+
+    HotelBookingAPI ..> Auth
+    HotelBookingAPI ..> Hotels
+    HotelBookingAPI ..> Bookings
+    Hotels ..> Hotel
+    Hotel ..> HotelBookings
+    Bookings ..> Booking
+    Auth ..> UserRep
+    Hotel ..> HotelRep
+    HotelBookings ..> BookingRep
+    Booking ..> BookingRep

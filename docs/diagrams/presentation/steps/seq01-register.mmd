@@ -1,0 +1,24 @@
+---
+title: Step 1 — User registration + validation check
+---
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant V as validateRegister
+    participant C as controllers/auth
+    participant UM as User model
+    participant DB as MongoDB
+
+    U->>V: POST /auth/register {name, tel, email, password}
+    alt missing tel, bad email or password under 8 chars
+        V-->>U: 400 Bad Request
+    end
+    V->>C: register()
+    C->>UM: create({name, tel, email, password, role: user})
+    UM->>UM: hash password with bcrypt
+    UM->>DB: insert user
+    alt email already registered
+        DB-->>C: duplicate key
+        C-->>U: 400 Email already registered
+    end
+    C-->>U: 201 {user} + HttpOnly cookies (access + refresh token)

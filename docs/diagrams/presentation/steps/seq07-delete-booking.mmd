@@ -1,0 +1,26 @@
+---
+title: Steps 7 and 12 — Delete own booking (user) / any booking (admin)
+---
+sequenceDiagram
+    autonumber
+    actor A as User or Admin
+    participant P as protect
+    participant C as controllers/bookings
+    participant B as Booking model
+
+    A->>P: DELETE /bookings/:id
+    alt not logged in
+        P-->>A: 401 Not authorized
+    end
+    P->>C: deleteBooking()
+    C->>B: findOneAndUpdate(scope(req), {deletedAt: now})
+    Note over C: user: {_id, user: me, deletedAt: null}<br/>admin: {_id, deletedAt: null}
+    alt another user's booking (user) or not found
+        C-->>A: 404 No booking with this id
+    end
+    C-->>A: 200 {data: {}}
+
+    A->>P: GET /bookings/:id (same id)
+    P->>C: getBooking()
+    C->>B: findOne(scope(req))
+    C-->>A: 404 deleted booking is no longer found

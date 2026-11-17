@@ -1,0 +1,30 @@
+---
+title: Steps 5 and 10 — View own bookings (user) / any booking (admin)
+---
+sequenceDiagram
+    autonumber
+    actor A as User or Admin
+    participant P as protect
+    participant C as controllers/bookings
+    participant B as Booking model
+
+    A->>P: GET /bookings
+    alt not logged in
+        P-->>A: 401 Not authorized
+    end
+    P->>C: getBookings()
+    alt role = user
+        C->>B: find({user: me, deletedAt: null})
+    else role = admin
+        C->>B: find({deletedAt: null})
+    end
+    B-->>C: bookings + hotel and user details
+    C-->>A: 200 {count, data: bookings}
+
+    A->>P: GET /bookings/:id
+    P->>C: getBooking()
+    C->>B: findOne(scope(req))
+    alt another user's booking (user) or not found
+        C-->>A: 404 No booking with this id
+    end
+    C-->>A: 200 {data: booking}
